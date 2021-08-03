@@ -147,6 +147,7 @@ std::vector<FieldT> interpolate_polynomial(const std::vector<uint64_t>& v, const
     return interpolation_polynomial;
 }
 
+/*
 template<typename FieldT, size_t N, size_t M>
 std::vector<pb_variable_array<FieldT>> 
 get_rows(std::shared_ptr<data_source_integer<FieldT, N, M>> dsi)
@@ -168,6 +169,7 @@ get_rows(std::shared_ptr<data_source_integer<FieldT, N, M>> dsi)
 
     return rows;    
 }
+*/
 
 template<typename FieldT>
 class size_enforcing_gadget : public gadget<FieldT> {

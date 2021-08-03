@@ -754,9 +754,45 @@ void run_interactive_inner_join_proto()
 
         join_gadget.generate_r1cs_witness();
 
+        // ouput vectors of the inner join gadget
+        std::vector<FieldT> vals_tilde_delta, vals_tilde_p, vals_tilde_q, vals_tilde_r;
+        vals_tilde_delta = pb_tilde_delta.get_vals(pb);
+        vals_tilde_p = pb_tilde_p.get_vals(pb);
+        vals_tilde_q = pb_tilde_q.get_vals(pb);
+        vals_tilde_r = pb_tilde_r.get_vals(pb);
+
+
         std::vector<FieldT> rand_vec;
         for (size_t i = 0; i < 19; ++i)
             rand_vec.emplace_back(FieldT::random_element());
+        
+        // compute commitments for each of the commitment slots
+        auto cm_x = compute_commitment(ck, vals_x, rand_vec[0]);
+        auto cm_y = compute_commitment(ck, vals_y, rand_vec[1]);
+        auto cm_z = compute_commitment(ck, vals_z, rand_vec[2]);
+        auto cm_w = compute_commitment(ck, vals_w, rand_vec[3]);
+        auto cm_p = compute_commitment(ck, vals_p, rand_vec[4]);
+        auto cm_q = compute_commitment(ck, vals_q, rand_vec[5]);
+        auto cm_r = compute_commitment(ck, vals_r, rand_vec[6]);
+        
+        auto cm_tr_X = compute_commitment(ck, vals_tr_X, rand_vec[7]);
+        auto cm_tr_Y = compute_commitment(ck, vals_tr_Y, rand_vec[8]);
+        auto cm_tr_Z = compute_commitment(ck, vals_tr_Z, rand_vec[9]);
+        auto cm_tr_W = compute_commitment(ck, vals_tr_W, rand_vec[10]);
+        auto cm_tr_I = compute_commitment(ck, vals_tr_I, rand_vec[11]);
+        auto cm_tr_J = compute_commitment(ck, vals_tr_J, rand_vec[12]);
+        auto cm_tr_O = compute_commitment(ck, vals_tr_O, rand_vec[13]);
+        auto cm_tr_S = compute_commitment(ck, vals_tr_S, rand_vec[14]);
+
+        auto cm_tilde_delta = compute_commitment(ck, vals_tilde_delta, rand_vec[15]);
+        auto cm_tilde_p = compute_commitment(ck, vals_tilde_p, rand_vec[16]);
+        auto cm_tilde_q = compute_commitment(ck, vals_tilde_q, rand_vec[17]);
+        auto cm_tilde_r = compute_commitment(ck, vals_tilde_r, rand_vec[18]);
+
+        auto cm_vec = {cm_x, cm_y, cm_z, cm_w, cm_p, cm_q, cm_r, cm_tr_X, cm_tr_Y, cm_tr_Z, cm_tr_W,
+                        cm_tr_I, cm_tr_J, cm_tr_O, cm_tr_S, cm_tilde_delta, cm_tilde_p, cm_tilde_q, cm_tilde_r};
+
+
 
         // generate keys
         r1cs_adaptive_snark_keypair<snark_pp> key = r1cs_adaptive_snark_generator(
@@ -771,11 +807,19 @@ void run_interactive_inner_join_proto()
             pb.primary_input(),
             pb.auxiliary_input(),
             rand_vec,
-            7,
+            19,
             slot_size);
         end = libff::get_nsec_time();
         auto prover_time = (end - start) / 1000000000;
-        ofile << N << " " << prover_time << " " << pb.num_constraints() << std::endl;
+
+        bool ok = r1cs_adaptive_snark_verifier(
+            key.vk,
+            pb.primary_input(), 
+            cm_vec, 
+            19, 
+            slot_size);
+
+        ofile << N << " " << prover_time << " " << pb.num_constraints() << " " << ok << std::endl;
     }
 }
 

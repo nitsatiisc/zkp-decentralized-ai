@@ -208,6 +208,17 @@ public:
     void generate_r1cs_witness();
 };
 
+template<typename FieldT>
+void size_enforcing_gadget<FieldT>::allocate()
+{
+    // we assume that input and output to the gadget
+    // namely vsize_ and selector_ are added to the
+    // protoboard by the caller. Here we add the auxiliary 
+    // inputs to the protoboard
+    this->reverse_.allocate(this->pb, max_size_, this->annotation_prefix);
+    this->z_.allocate(this->pb, max_size_, this->annotation_prefix);
+    this->w_.allocate(this->pb, max_size_, this->annotation_prefix);
+}
 
 template<typename FieldT>
 void size_enforcing_gadget<FieldT>::generate_r1cs_constraints()

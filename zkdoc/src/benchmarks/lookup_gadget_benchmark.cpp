@@ -817,7 +817,8 @@ void run_interactive_inner_join_proto()
             pb.primary_input(), 
             cm_vec, 
             19, 
-            slot_size);
+            slot_size,
+            proof);
 
         ofile << N << " " << prover_time << " " << pb.num_constraints() << " " << ok << std::endl;
     }

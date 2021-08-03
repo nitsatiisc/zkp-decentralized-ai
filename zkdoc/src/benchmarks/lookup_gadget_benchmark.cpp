@@ -925,9 +925,9 @@ void run_interactive_decision_tree_proto()
 
 int main(int argc, char *argv[])
 {
-    run_interactive_lookup_proto();
-    run_interactive_filter_proto();
+    //run_interactive_lookup_proto();
+    //run_interactive_filter_proto();
     run_interactive_inner_join_proto();
-    run_interactive_decision_tree_proto();
+    //run_interactive_decision_tree_proto();
     return 0;
 }

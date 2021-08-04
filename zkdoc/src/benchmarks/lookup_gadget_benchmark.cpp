@@ -269,18 +269,14 @@ proto_stats execute_simultaneous_perm_proto
     CommT cm_left = CommT::zero();
     CommT cm_right = CommT::zero();
 
+    // randomly sampled coefficients for linear combination
     std::vector<FieldT> alpha(vecs_left.size());
-    std::vector<FieldT> gamma(vecs_right.size());
 
     FieldT rL = FieldT::zero();
     FieldT rR = FieldT::zero();
 
     for(size_t i=0; i < alpha.size(); ++i)
         alpha[i] = FieldT::random_element();
-    
-    for(size_t i=0; i < gamma.size(); ++i)
-        gamma[i] = FieldT::random_element();
-    
 
     for(size_t i=0; i < rand_left.size(); ++i)
     {
@@ -290,8 +286,8 @@ proto_stats execute_simultaneous_perm_proto
 
     for(size_t i=0; i < rand_right.size(); ++i)
     {
-        cm_right = cm_right + (gamma[i] * comm_right[i]);
-        rR = rR + (gamma[i] * rand_right[i]);
+        cm_right = cm_right + (alpha[i] * comm_right[i]);
+        rR = rR + (alpha[i] * rand_right[i]);
     }
 
 
@@ -303,8 +299,8 @@ proto_stats execute_simultaneous_perm_proto
             X[i] = X[i] + alpha[j] * vecs_left[j][i];
     
     for(size_t i=0; i < Y.size(); ++i)
-        for(size_t j=0; j < gamma.size(); ++j)
-            Y[i] = Y[i] + gamma[j] * vecs_right[j][i];
+        for(size_t j=0; j < alpha.size(); ++j)
+            Y[i] = Y[i] + alpha[j] * vecs_right[j][i];
 
 
     protoboard<FieldT> pb2;

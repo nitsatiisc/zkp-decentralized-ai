@@ -397,7 +397,7 @@ void run_interactive_lookup()
         auto cm_L = compute_commitment(ck, L, rL);
         auto cm_U = compute_commitment(ck, L, rU);
         auto cm_V = compute_commitment(ck, L, rV);
-        auto cm_vec = {cm_L, cm_U, cm_V};
+        std::vector<knowledge_commitment<libff::G1<snark_pp>, libff::G2<snark_pp>>> cm_vec = {cm_L, cm_U, cm_V};
 
         proto_stats run_stats = execute_interactive_lookup_proto<snark_pp>(ck, slot_size, cm_vec, L, U, V, rL, rU, rV);
         ofile << run_stats.prover_time << " " << run_stats.verifier_time << " " << run_stats.num_constraints << " " << run_stats.status << std::endl;

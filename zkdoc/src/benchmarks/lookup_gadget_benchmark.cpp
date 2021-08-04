@@ -280,10 +280,10 @@ proto_stats execute_interactive_lookup_proto
     allocate_slot(pb, pb_L, n, "pb_L");
     allocate_slot(pb, pb_U, m, "pb_U");
     allocate_slot(pb, pb_V, m, "pb_V");
-    allocate_slot(pb, pb_uL, m+N, "pb_uL");
-    allocate_slot(pb, pb_vL, m+N, "pb_vL");
-    allocate_slot(pb, pb_uR, m+N, "pb_uR");
-    allocate_slot(pb, pb_vR, m+N, "pb_vR");
+    allocate_slot(pb, pb_uL, m+n, "pb_uL");
+    allocate_slot(pb, pb_vL, m+n, "pb_vL");
+    allocate_slot(pb, pb_uR, m+n, "pb_uR");
+    allocate_slot(pb, pb_vR, m+n, "pb_vR");
 
     pb_L.fill_with_field_elements(pb, L);
     pb_U.fill_with_field_elements(pb, U);

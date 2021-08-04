@@ -253,9 +253,7 @@ void allocate_slot(protoboard<FieldT>& pb, pb_variable_array<FieldT>& v, size_t 
 
 }
 
-template<typename ppT, 
-    typename FieldT = libff::Fr<ppT>,
-    typename CommT = knowledge_commitment<libff::G1<ppT>, libff::G2<ppT>> >
+template<typename ppT, typename FieldT = libff::Fr<ppT>, typename CommT = knowledge_commitment<libff::G1<ppT>, libff::G2<ppT>> >
 proto_stats execute_interactive_lookup_proto
 (
     const commitment_key<ppT>& ck,
@@ -277,13 +275,13 @@ proto_stats execute_interactive_lookup_proto
     size_t n = L.size();
     size_t m = U.size();
 
-    allocate_slot(pb, pb_L, n, "pb_L");
-    allocate_slot(pb, pb_U, m, "pb_U");
-    allocate_slot(pb, pb_V, m, "pb_V");
-    allocate_slot(pb, pb_uL, m+n, "pb_uL");
-    allocate_slot(pb, pb_vL, m+n, "pb_vL");
-    allocate_slot(pb, pb_uR, m+n, "pb_uR");
-    allocate_slot(pb, pb_vR, m+n, "pb_vR");
+    allocate_slot(pb, pb_L, n, slot_size, "pb_L");
+    allocate_slot(pb, pb_U, m, slot_size, "pb_U");
+    allocate_slot(pb, pb_V, m, slot_size, "pb_V");
+    allocate_slot(pb, pb_uL, m+n, slot_size, "pb_uL");
+    allocate_slot(pb, pb_vL, m+n, slot_size, "pb_vL");
+    allocate_slot(pb, pb_uR, m+n, slot_size, "pb_uR");
+    allocate_slot(pb, pb_vR, m+n, slot_size, "pb_vR");
 
     pb_L.fill_with_field_elements(pb, L);
     pb_U.fill_with_field_elements(pb, U);
@@ -305,9 +303,9 @@ proto_stats execute_interactive_lookup_proto
     auto rvR = FieldT::random_element();
 
     // compute commitments
-    auto cm_L = compute_commitment(ck, L, rL);
-    auto cm_U = compute_commitment(ck, U, rU);
-    auto cm_V = compute_commitment(ck, V, rV);
+    auto cm_L = commited_inputs[0];
+    auto cm_U = commited_inputs[1];
+    auto cm_V = commited_inputs[2];
     auto cm_uL = compute_commitment(ck, uL, ruL);
     auto cm_vL = compute_commitment(ck, vL, rvL);
     auto cm_uR = compute_commitment(ck, uR, ruR);

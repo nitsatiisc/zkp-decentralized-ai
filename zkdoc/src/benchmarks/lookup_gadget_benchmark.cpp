@@ -299,14 +299,12 @@ proto_stats execute_simultaneous_perm_proto
     std::vector<FieldT> Y(vecs_right[0].size(), FieldT::zero());
 
     for(size_t i=0; i < X.size(); ++i)
-        for(size_t j=0; j < vecs_left.size(); ++j)
-        {
-            X[i] = X[i] + rand_left[j] * vecs_left[j][i];
-            rL = rL + rand_left[j] 
+        for(size_t j=0; j < alpha.size(); ++j)
+            X[i] = X[i] + alpha[j] * vecs_left[j][i];
     
     for(size_t i=0; i < Y.size(); ++i)
-        for(size_t j=0; j < vecs_right.size(); ++j)
-            Y[i] = Y[i] + rand_right[j] * vecs_right[j][i];
+        for(size_t j=0; j < gamma.size(); ++j)
+            Y[i] = Y[i] + gamma[j] * vecs_right[j][i];
 
 
     protoboard<FieldT> pb2;

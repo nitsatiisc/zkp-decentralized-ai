@@ -480,9 +480,6 @@ proto_stats execute_interactive_lookup_proto
     lookup_stats.num_constraints += sub_proto_stats.num_constraints;
 
     return lookup_stats;
-
-
-
 }
 
 void run_interactive_lookup()
@@ -497,7 +494,7 @@ void run_interactive_lookup()
     ofile << "N = " << N << std::endl;
 
     // m = number of lookups
-    std::vector<size_t> mvalues = {100, 1000, 10000};
+    std::vector<size_t> mvalues = {100, 1000, 10000, 100000};
     for(size_t tn=0; tn < mvalues.size(); ++tn)
     {
         size_t m = mvalues[tn];
@@ -530,204 +527,6 @@ void run_interactive_lookup()
         ofile << run_stats.prover_time << " " << run_stats.verifier_time << " " << run_stats.num_constraints << " " << run_stats.status << std::endl;
     }
 
-}
-
-void run_interactive_lookup_proto()
-{
-    snark_pp::init_public_params();
-    typedef libff::Fr<snark_pp> FieldT;
-    
-    size_t N = 1000; // size of the table
-    size_t slot_size;
-
-    std::ofstream ofile("interactive-lookup-benchmark.txt");
-    ofile << "N = " << N << std::endl;
-
-    // m = number of lookups
-    std::vector<size_t> mvalues = {100, 1000, 10000, 100000};
-    for(size_t tn=0; tn < mvalues.size(); ++tn)
-    {
-        size_t m = mvalues[tn];
-        slot_size = m + N + 1;
-        commitment_key<snark_pp> ck;
-        ck.sample(1+slot_size);
-
-        long long start, end;
-
-        protoboard<FieldT> pb;
-        pb_variable_array<FieldT> L, U, V;
-        // auxiliary vector
-        pb_variable_array<FieldT> uL, vL, uR, vR;
-
-        allocate_slot(pb, L, N, slot_size, "L");
-        allocate_slot(pb, U, m, slot_size, "U");
-        allocate_slot(pb, V, m, slot_size, "V");
-        allocate_slot(pb, uL, m+N, slot_size, "uL");
-        allocate_slot(pb, vL, m+N, slot_size, "vL");
-        allocate_slot(pb, uR, m+N, slot_size, "uR");
-        allocate_slot(pb, vR, m+N, slot_size, "vR");
-
-        // allocate variables for auxiliary variables
-        for(size_t i=0; i < N; ++i) 
-            pb.val(L[i]) = 2*i;
-
-        for(size_t i=0; i < m; ++i)
-            pb.val(U[i]) = get_random_value(N);
-        
-        for(size_t i=0; i < m; ++i) {
-            size_t idx = static_cast<size_t>(pb.val(U[i]).as_ulong());
-            pb.val(V[i]) = pb.val(L[idx]);
-        }
-
-        // compute commitments to L, U and V
-        auto rL = FieldT::random_element();
-        auto rU = FieldT::random_element();
-        auto rV = FieldT::random_element();
-
-        auto pvL = L.get_vals(pb);
-        auto pvU = U.get_vals(pb);
-        auto pvV = V.get_vals(pb);
-
-        auto cmL = compute_commitment<snark_pp>(ck, pvL, rL);
-        auto cmU = compute_commitment<snark_pp>(ck, pvU, rU);
-        auto cmV = compute_commitment<snark_pp>(ck, pvV, rV);
-
-        interactive_lookup_arithmetic<FieldT> lookup_arith_gadget(pb, L, U, V, uL, vL, uR, vR);
-        lookup_arith_gadget.generate_r1cs_constraints();
-        lookup_arith_gadget.generate_r1cs_witness();
-
-        // commit to auxiliary vectors
-        auto ruL = FieldT::random_element();
-        auto rvL = FieldT::random_element();
-        auto ruR = FieldT::random_element();
-        auto rvR = FieldT::random_element();
-
-        auto pvuL = uL.get_vals(pb);
-        auto pvuR = uR.get_vals(pb);
-        auto pvvL = vL.get_vals(pb);
-        auto pvvR = vR.get_vals(pb);
-
-
-        auto cmuL = compute_commitment<snark_pp>(ck, pvuL, ruL);
-        auto cmvL = compute_commitment<snark_pp>(ck, pvvL, rvL);
-        auto cmuR = compute_commitment<snark_pp>(ck, pvuR, ruR);
-        auto cmvR = compute_commitment<snark_pp>(ck, pvvR, rvR);
-
-        // generate proof for first step of the protocol
-        r1cs_adaptive_snark_keypair<snark_pp> key = r1cs_adaptive_snark_generator(
-        pb.get_constraint_system(),
-        ck,
-        7,
-        slot_size);
-
-        auto randomness = {rL, rU, rV, ruL, rvL, ruR, rvR};
-        auto comms = {cmL, cmU, cmV, cmuL, cmvL, cmuR, cmvR};
-
-        start = libff::get_nsec_time();
-        auto proof = r1cs_adaptive_snark_prover(
-            key.pk,
-            pb.primary_input(),
-            pb.auxiliary_input(),
-            randomness,
-            7,
-            slot_size
-        );
-
-        end = libff::get_nsec_time();
-
-        long long prover_time = (end - start)/1000000000;
-
-        start = libff::get_nsec_time();
-        bool ok = r1cs_adaptive_snark_verifier(
-            key.vk,
-            pb.primary_input(),
-            comms,
-            7,
-            slot_size,
-            proof
-        );
-        end = libff::get_nsec_time();
-
-        long long verifier_time = (end - start)/1000000;
-
-        
-
-        // now prove the simultaneous permutation
-        auto alpha = FieldT::random_element();
-        auto beta = FieldT::random_element();
-
-        // P & V compute
-        auto cl = cmuL + alpha * cmvL;
-        auto cr = cmuR + alpha * cmvR;
-        auto rl = ruL + alpha * rvL;
-        auto rr = ruR + alpha * rvR;
-
-        protoboard<FieldT> pb2;
-        
-        pb_variable<FieldT> challenge;
-        pb_variable_array<FieldT> input, output;
-
-        challenge.allocate(pb2, "challenge");
-        allocate_slot(pb2, input, m+N, slot_size, "input");
-        allocate_slot(pb2, output, m+N, slot_size, "output");
-
-        interactive_permutation_gadget<FieldT> permutation_gadget(pb2, challenge, input, output, "permutation test");
-        permutation_gadget.generate_r1cs_constraints();
-
-        // generate witness
-        for(size_t i=0; i < input.size(); ++i)
-        {
-            pb2.val(input[i]) = pb.val(uL[i]) + alpha * pb.val(vL[i]);
-            pb2.val(output[i]) = pb.val(uR[i]) + alpha * pb.val(vR[i]);
-        }
-
-        pb2.val(challenge) = beta;
-
-        permutation_gadget.generate_r1cs_witness();
-        pb2.set_input_sizes(1);
-
-        // generate keys for permutation gadget
-        r1cs_adaptive_snark_keypair<snark_pp> key2 = r1cs_adaptive_snark_generator(
-        pb2.get_constraint_system(),
-        ck,
-        2,
-        slot_size); 
-        
-        auto randomness2 = {rl, rr};
-        auto comms2 = {cl, cr};
-
-        start = libff::get_nsec_time();
-        auto proof2 = r1cs_adaptive_snark_prover(
-            key2.pk,
-            pb2.primary_input(),
-            pb2.auxiliary_input(),
-            randomness2,
-            2,
-            slot_size            
-        );
-        end = libff::get_nsec_time();
-        auto prover_time2 = (end - start)/1000000000;
-
-
-        start = libff::get_nsec_time();
-        bool ok2 = r1cs_adaptive_snark_verifier(
-            key2.vk,
-            pb2.primary_input(),
-            comms2,
-            2,
-            slot_size,
-            proof2
-        );
-        end = libff::get_nsec_time();
-        auto verifier_time2 = (end - start)/1000000;
-
-
-        ofile << m << " " << prover_time << " " << 
-            prover_time2 << " " << verifier_time << " " << verifier_time2 << " " << 
-            pb.num_constraints() << " " << pb2.num_constraints() << " " 
-            << ok << " " << ok2 << std::endl;
-
-    }
 }
 
 void run_interactive_filter_proto()
@@ -926,6 +725,7 @@ void run_interactive_inner_join_proto()
 {
     snark_pp::init_public_params();
     typedef libff::Fr<snark_pp> FieldT;
+    typedef knowledge_commitment<libff::G1<snark_pp>, libff::G2<snark_pp>> CommT;
     
     std::ofstream ofile("inner-join-benchmarks.txt");
     std::vector<size_t> Nvalues = {100, 1000, 10000, 100000};
@@ -1100,6 +900,7 @@ void run_interactive_inner_join_proto()
         end = libff::get_nsec_time();
         auto prover_time = (end - start) / 1000000000;
 
+        start = libff::get_nsec_time();
         bool ok = r1cs_adaptive_snark_verifier(
             key.vk,
             pb.primary_input(), 
@@ -1107,10 +908,67 @@ void run_interactive_inner_join_proto()
             19, 
             slot_size,
             proof);
+        end = libff::get_nsec_time();
+        auto verifier_time = (end - start)/1000000;
 
-        // add the lookup protocol
+        // add the lookup subprotocols
+        proto_stats lookup1_stats, lookup2_stats;
+        FieldT gamma = FieldT::random();
+        // Use gamma to combine the lookups with same access patterns I and J
+        // vals_x and vals_y and indexed using I
+        // vals_z and vals_w are indexed using J
+        std::vector<FieldT> L1(vals_x.size()), L2(vals_z.size());
+        std::vector<FieldT> V1(vals_tr_X.size()), V2(vals_tr_Y.size());
 
-        ofile << N << " " << prover_time << " " << pb.num_constraints() << " " << ok << std::endl;
+        for(size_t i=0; i < L1.size(); ++i)
+        {
+            L1[i] = vals_x[i] + (gamma * vals_y[i]);
+            L2[i] = vals_z[i] + (gamma * vals_w[i]);
+        }
+
+        for(size_t i=0; i < V1.size(); ++i)
+        {
+            V1[i] = vals_tr_X[i] + (gamma * vals_tr_Y[i]);
+            V2[i] = vals_tr_Z[i] + (gamma * vals_tr_W[i]);
+        }
+
+        CommT cm_L_1 = cm_x + gamma * cm_y;
+        CommT cm_L_2 = cm_z + gamma * cm_w;
+        CommT cm_V_1 = cm_tr_X + gamma * cm_tr_Y;
+        CommT cm_V_2 = cm_tr_Z + gamma * cm_tr_W;
+
+        FieldT rL_1 = rand_vec[0] + gamma * rand_vec[1]; // corresponding to x + \gamma. y
+        FieldT rL_2 = rand_vec[2] + gamma * rand_vec[3]; // corr. to z + \gamma. w
+        FieldT rV_1 = rand_vec[7] + gamma * rand_vec[8];
+        FieldT rV_2 = rand_vec[9] + gamma * rand_vec[10];
+        FieldT rU_1 = rand_vec[11];
+        FieldT rU_2 = rand_vec[12];
+        std::vector<CommT> cm_vec_1 = {cm_L_1, cm_U_1, cm_V_1};
+        std::vector<CommT> cm_vec_2 = {cm_L_2, cm_U_2, cm_V_2};
+
+        lookup1_stats = execute_interactive_lookup_proto<snark_pp>(
+            ck,
+            slot_size,
+            cm_vec_1,
+            L1, vals_tr_I, V1,
+            rL_1, rU_1, rV_1
+        );
+
+        lookup2_stats = execute_interactive_lookup_proto<snark_pp>(
+            ck,
+            slot_size,
+            cm_vec_2,
+            L2, vals_tr_J, V2,
+            rL_2, rU_2, rV_2
+        );
+
+        long long t_prover_time = prover_time + lookup1_stats.prover_time + lookup2_stats.prover_time;
+        long long t_verifier_time = verifier_time + lookup1_stats.verifier_time + lookup2_stats.verifier_time;
+        bool status = ok & lookup1_stats.status & lookup2_stats.status;
+        long long t_constraints = pb.num_constraints() + 2 * lookup1_stats.num_constraints;
+
+        ofile << N << " " << t_prover_time << " " << t_verifier_time << " " << t_constraints << " " << status << std::endl;
+
     }
 }
 

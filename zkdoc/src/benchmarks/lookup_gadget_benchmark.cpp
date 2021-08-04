@@ -303,9 +303,9 @@ proto_stats execute_interactive_lookup_proto
     auto rvR = FieldT::random_element();
 
     // compute commitments
-    auto cm_L = commited_inputs[0];
-    auto cm_U = commited_inputs[1];
-    auto cm_V = commited_inputs[2];
+    auto cm_L = commited_input[0];
+    auto cm_U = commited_input[1];
+    auto cm_V = commited_input[2];
     auto cm_uL = compute_commitment(ck, uL, ruL);
     auto cm_vL = compute_commitment(ck, vL, rvL);
     auto cm_uR = compute_commitment(ck, uR, ruR);

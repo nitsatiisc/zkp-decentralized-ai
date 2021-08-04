@@ -472,10 +472,10 @@ proto_stats execute_interactive_lookup_proto
     // now run the simultaneous permutation sub-protocol
     std::vector<CommT> cm_left = {cm_uL, cm_vL};
     std::vector<CommT> cm_right = {cm_uR, cm_vR};
-    auto vecs_left = {uL, vL};
-    auto vecs_right = {uR, vR};
-    auto rand_left = {ruL, rvL};
-    auto rand_right = {ruR, rvR};
+    std::vector<std::vector<FieldT>> vecs_left = {uL, vL};
+    std::vector<std::vector<FieldT>> vecs_right = {uR, vR};
+    std::vector<FieldT> rand_left = {ruL, rvL};
+    std::vector<FieldT> rand_right = {ruR, rvR};
 
     auto sub_proto_stats = execute_simultaneous_perm_proto<snark_pp>(ck, slot_size, cm_left, cm_right, vecs_left, vecs_right, rand_left, rand_right);
     lookup_stats.prover_time += sub_proto_stats.prover_time;

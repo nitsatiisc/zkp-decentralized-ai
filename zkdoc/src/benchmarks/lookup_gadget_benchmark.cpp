@@ -269,8 +269,8 @@ proto_stats execute_simultaneous_perm_proto
     CommT cm_left = CommT::zero();
     CommT cm_right = CommT::zero();
 
-    FieldT alpha(vecs_left.size());
-    FieldT gamma(vecs_right.size());
+    std::vector<FieldT> alpha(vecs_left.size());
+    std::vector<FieldT> gamma(vecs_right.size());
 
     FieldT rL = FieldT::zero();
     FieldT rR = FieldT::zero();

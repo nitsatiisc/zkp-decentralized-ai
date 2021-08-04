@@ -913,7 +913,7 @@ void run_interactive_inner_join_proto()
 
         // add the lookup subprotocols
         proto_stats lookup1_stats, lookup2_stats;
-        FieldT gamma = FieldT::random();
+        FieldT gamma = FieldT::random_element();
         // Use gamma to combine the lookups with same access patterns I and J
         // vals_x and vals_y and indexed using I
         // vals_z and vals_w are indexed using J

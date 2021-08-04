@@ -943,8 +943,8 @@ void run_interactive_inner_join_proto()
         FieldT rV_2 = rand_vec[9] + gamma * rand_vec[10];
         FieldT rU_1 = rand_vec[11];
         FieldT rU_2 = rand_vec[12];
-        std::vector<CommT> cm_vec_1 = {cm_L_1, cm_U_1, cm_V_1};
-        std::vector<CommT> cm_vec_2 = {cm_L_2, cm_U_2, cm_V_2};
+        std::vector<CommT> cm_vec_1 = {cm_L_1, cm_tr_I, cm_V_1};
+        std::vector<CommT> cm_vec_2 = {cm_L_2, cm_tr_J, cm_V_2};
 
         lookup1_stats = execute_interactive_lookup_proto<snark_pp>(
             ck,

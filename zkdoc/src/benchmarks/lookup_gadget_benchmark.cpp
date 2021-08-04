@@ -45,6 +45,15 @@ unsigned int get_random_value(size_t n)
     return distrib(gen);
 }
 
+struct proto_stats {
+    long long generator_time;
+    long long prover_time;
+    long long verifier_time;
+    uint64_t num_constraints;
+    bool status;
+};
+
+
 struct filter_example_type {
     unsigned int size;
     std::vector<size_t> source;
@@ -244,6 +253,158 @@ void allocate_slot(protoboard<FieldT>& pb, pb_variable_array<FieldT>& v, size_t 
 
 }
 
+template<typename ppT, 
+    typename FieldT = libff::Fr<ppT>,
+    typename CommT = knowledge_commitment<libff::G1<ppT>, libff::G2<ppT>> >
+proto_stats execute_interactive_lookup_proto
+(
+    const commitment_key<ppT>& ck,
+    size_t slot_size,
+    const std::vector<CommT>& commited_input,
+    const std::vector<FieldT>& L,
+    const std::vector<FieldT>& U,
+    const std::vector<FieldT>& V,
+    const FieldT rL,
+    const FieldT rU,
+    const FieldT rV
+)
+{
+    protoboard<FieldT> pb; 
+
+    pb_variable_array<FieldT> pb_L, pb_U, pb_V;
+    pb_variable_array<FieldT> pb_uL, pb_vL, pb_uR, pb_vR;
+
+    size_t n = L.size();
+    size_t m = U.size();
+
+    allocate_slot(pb, pb_L, n, "pb_L");
+    allocate_slot(pb, pb_U, m, "pb_U");
+    allocate_slot(pb, pb_V, m, "pb_V");
+    allocate_slot(pb, pb_uL, m+N, "pb_uL");
+    allocate_slot(pb, pb_vL, m+N, "pb_vL");
+    allocate_slot(pb, pb_uR, m+N, "pb_uR");
+    allocate_slot(pb, pb_vR, m+N, "pb_vR");
+
+    pb_L.fill_with_field_elements(pb, L);
+    pb_U.fill_with_field_elements(pb, U);
+    pb_V.fill_with_field_elements(pb, V);
+
+    interactive_lookup_arithmetic<FieldT> lookup_arith_gadget(pb, pb_L, pb_U, pb_V, pb_uL, pb_vL, pb_uR, pb_vR, "lookup_arith_gadget");
+    lookup_arith_gadget.generate_r1cs_constraints();
+    lookup_arith_gadget.generate_r1cs_witness();
+
+    std::vector<FieldT> uL = pb_uL.get_vals(pb);
+    std::vector<FieldT> vL = pb_vL.get_vals(pb);
+    std::vector<FieldT> uR = pb_uR.get_vals(pb);
+    std::vector<FieldT> vR = pb_vR.get_vals(pb);
+
+    // additional commitment randomness for output vectors
+    auto ruL = FieldT::random_element();
+    auto rvL = FieldT::random_element();
+    auto ruR = FieldT::random_element();
+    auto rvR = FieldT::random_element();
+
+    // compute commitments
+    auto cm_L = compute_commitment(ck, L, rL);
+    auto cm_U = compute_commitment(ck, U, rU);
+    auto cm_V = compute_commitment(ck, V, rV);
+    auto cm_uL = compute_commitment(ck, uL, ruL);
+    auto cm_vL = compute_commitment(ck, vL, rvL);
+    auto cm_uR = compute_commitment(ck, uR, ruR);
+    auto cm_vR = compute_commitment(ck, vR, rvR);
+
+    auto rand_vec = {rL, rU, rV, ruL, rvL, ruR, rvR};
+    auto cm_vec = {cm_L, cm_U, cm_V, cm_uL, cm_vL, cm_uR, cm_vR};
+
+    proto_stats lookup_stats;
+    long long start, end;
+
+    // generate proof for first step of the protocol
+    start = libff::get_nsec_time();
+    r1cs_adaptive_snark_keypair<snark_pp> key = r1cs_adaptive_snark_generator(
+        pb.get_constraint_system(),
+        ck,
+        7,
+        slot_size);
+    end = libff::get_nsec_time();
+    lookup_stats.generator_time = (end - start)/1000000000; // generator time in seconds
+    
+    start = libff::get_nsec_time();
+    auto proof = r1cs_adaptive_snark_prover(
+        key.pk,
+        pb.primary_input(),
+        pb.auxiliary_input(),
+        rand_vec,
+        7,
+        slot_size);
+
+    end = libff::get_nsec_time();
+    lookup_stats.prover_time = (end - start) / 1000000000; // prover time in seconds
+
+    start = libff::get_nsec_time();
+    bool ok = r1cs_adaptive_snark_verifier(
+        key.vk,
+        pb.primary_input(),
+        cm_vec,
+        7,
+        slot_size,
+        proof);
+    end = libff::get_nsec_time();
+
+    lookup_stats.verifier_time = (end - start) / 1000000; // verifier time in milliseconds
+    lookup_stats.num_constraints = pb.num_constraints();
+    lookup_stats.status = ok;
+
+    return lookup_stats;
+}
+
+void run_interactive_lookup()
+{
+    snark_pp::init_public_params();
+    typedef libff::Fr<snark_pp> FieldT;
+    
+    size_t N = 1000; // size of the table
+    size_t slot_size;
+
+    std::ofstream ofile("interactive-lookup-benchmark-new.txt");
+    ofile << "N = " << N << std::endl;
+
+    // m = number of lookups
+    std::vector<size_t> mvalues = {100, 1000, 10000};
+    for(size_t tn=0; tn < mvalues.size(); ++tn)
+    {
+        size_t m = mvalues[tn];
+        slot_size = m + N + 1;
+        commitment_key<snark_pp> ck;
+        ck.sample(1+slot_size);
+
+        std::vector<FieldT> L, U, V;
+        for(size_t i=0; i < N; ++i)
+            L.emplace_back(2*i);
+        
+        for(size_t i=0; i < m; ++i)
+            U.emplace_back(get_random_value(N));
+        
+        for(size_t i=0; i < m; ++i)
+        {
+            V.emplace_back(L[ U[i].as_ulong() ]);
+        }
+
+        FieldT rL = FieldT::random_element();
+        FieldT rU = FieldT::random_element();
+        FieldT rV = FieldT::random_element();
+
+        auto cm_L = compute_commitment(ck, L, rL);
+        auto cm_U = compute_commitment(ck, L, rU);
+        auto cm_V = compute_commitment(ck, L, rV);
+        auto cm_vec = {cm_L, cm_U, cm_V};
+
+        proto_stats run_stats = execute_interactive_lookup_proto<snark_pp>(ck, slot_size, cm_vec, L, U, V, rL, rU, rV);
+        ofile << run_stats.prover_time << " " << run_stats.verifier_time << " " << run_stats.num_constraints << " " << run_stats.status << std::endl;
+    }
+
+}
+
 void run_interactive_lookup_proto()
 {
     snark_pp::init_public_params();
@@ -260,7 +421,7 @@ void run_interactive_lookup_proto()
     for(size_t tn=0; tn < mvalues.size(); ++tn)
     {
         size_t m = mvalues[tn];
-        slot_size = m + N + 10;
+        slot_size = m + N + 1;
         commitment_key<snark_pp> ck;
         ck.sample(1+slot_size);
 
@@ -820,6 +981,8 @@ void run_interactive_inner_join_proto()
             slot_size,
             proof);
 
+        // add the lookup protocol
+
         ofile << N << " " << prover_time << " " << pb.num_constraints() << " " << ok << std::endl;
     }
 }
@@ -927,7 +1090,8 @@ int main(int argc, char *argv[])
 {
     //run_interactive_lookup_proto();
     //run_interactive_filter_proto();
-    run_interactive_inner_join_proto();
+    //run_interactive_inner_join_proto();
+    run_interactive_lookup();
     //run_interactive_decision_tree_proto();
     return 0;
 }

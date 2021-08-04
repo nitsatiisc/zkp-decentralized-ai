@@ -477,7 +477,7 @@ proto_stats execute_interactive_lookup_proto
     auto rand_left = {ruL, rvL};
     auto rand_right = {ruR, rvR};
 
-    sub_proto_stats = execute_simultaneous_perm_proto<snark_pp>(ck, slot_size, cm_left, cm_right, vecs_left, vecs_right, rand_left, rand_right);
+    auto sub_proto_stats = execute_simultaneous_perm_proto<snark_pp>(ck, slot_size, cm_left, cm_right, vecs_left, vecs_right, rand_left, rand_right);
     lookup_stats.prover_time += sub_proto_stats.prover_time;
     lookup_stats.verifier_time += sub_proto_stats.verifier_time;
     lookup_stats.status &= sub_proto_stats.status;

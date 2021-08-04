@@ -734,10 +734,12 @@ void run_interactive_inner_join_proto()
     {
         size_t N = Nvalues[tn];
         size_t slot_size = 2 * N + 1;
+        // lookup subprotocol involves commitments over vectors of size N+1+2N
+        size_t slot_size_lookup = (N+1) + (2*N + 1); 
 
         // get commitment key
         commitment_key<snark_pp> ck;
-        ck.sample(slot_size + 1);
+        ck.sample(slot_size_lookup + 1);
         long long start, end;
 
         std::vector<size_t> x = {5, 10, 20, 30, 40, 50, 99, 99, 99, 99, 99};
@@ -946,9 +948,10 @@ void run_interactive_inner_join_proto()
         std::vector<CommT> cm_vec_1 = {cm_L_1, cm_tr_I, cm_V_1};
         std::vector<CommT> cm_vec_2 = {cm_L_2, cm_tr_J, cm_V_2};
 
+        
         lookup1_stats = execute_interactive_lookup_proto<snark_pp>(
             ck,
-            slot_size,
+            slot_size_lookup,
             cm_vec_1,
             L1, vals_tr_I, V1,
             rL_1, rU_1, rV_1
@@ -956,7 +959,7 @@ void run_interactive_inner_join_proto()
 
         lookup2_stats = execute_interactive_lookup_proto<snark_pp>(
             ck,
-            slot_size,
+            slot_size_lookup,
             cm_vec_2,
             L2, vals_tr_J, V2,
             rL_2, rU_2, rV_2

@@ -254,6 +254,124 @@ void allocate_slot(protoboard<FieldT>& pb, pb_variable_array<FieldT>& v, size_t 
 }
 
 template<typename ppT, typename FieldT = libff::Fr<ppT>, typename CommT = knowledge_commitment<libff::G1<ppT>, libff::G2<ppT>> >
+proto_stats execute_simultaneous_perm_proto
+(
+    const commitment_key<ppT>& ck,
+    size_t slot_size,
+    const std::vector<CommT>& comm_left,
+    const std::vector<CommT>& comm_right,
+    const std::vector<std::vector<FieldT>>& vecs_left,
+    const std::vector<std::vector<FieldT>>& vecs_right,
+    const std::vector<FieldT>& rand_left,
+    const std::vector<FieldT>& rand_right
+)
+{
+    CommT cm_left = CommT::zero();
+    CommT cm_right = CommT::zero();
+
+    FieldT alpha(vecs_left.size());
+    FieldT gamma(vecs_right.size());
+
+    FieldT rL = FieldT::zero();
+    FieldT rR = FieldT::zero();
+
+    for(size_t i=0; i < alpha.size(); ++i)
+        alpha[i] = FieldT::random_element();
+    
+    for(size_t i=0; i < gamma.size(); ++i)
+        gamma[i] = FieldT::random_element();
+    
+
+    for(size_t i=0; i < rand_left.size(); ++i)
+    {
+        cm_left = cm_left + (alpha[i] * comm_left[i]);
+        rL = rL + (alpha[i] * rand_left[i]);
+    }
+
+    for(size_t i=0; i < rand_right.size(); ++i)
+    {
+        cm_right = cm_right + (gamma[i] * comm_right[i]);
+        rR = rR + (gamma[i] * rand_right[i]);
+    }
+
+
+    std::vector<FieldT> X(vecs_left[0].size(), FieldT::zero());
+    std::vector<FieldT> Y(vecs_right[0].size(), FieldT::zero());
+
+    for(size_t i=0; i < X.size(); ++i)
+        for(size_t j=0; j < vecs_left.size(); ++j)
+        {
+            X[i] = X[i] + rand_left[j] * vecs_left[j][i];
+            rL = rL + rand_left[j] 
+    
+    for(size_t i=0; i < Y.size(); ++i)
+        for(size_t j=0; j < vecs_right.size(); ++j)
+            Y[i] = Y[i] + rand_right[j] * vecs_right[j][i];
+
+
+    protoboard<FieldT> pb2;
+    pb_variable<FieldT> challenge;
+    pb_variable_array<FieldT> input, output;
+    FieldT beta = FieldT::random_element(); // random challenge for polynomial identity test
+    long long start, end;
+    proto_stats run_stats;
+
+    challenge.allocate(pb2, "challenge");
+    allocate_slot(pb2, input, X.size(), slot_size, "input");
+    allocate_slot(pb2, output, Y.size(), slot_size, "output");
+
+    interactive_permutation_gadget<FieldT> permutation_gadget(pb2, challenge, input, output, "permutation test");
+    permutation_gadget.generate_r1cs_constraints();
+
+    // generate witness
+    input.fill_with_field_elements(pb2, X);
+    output.fill_with_field_elements(pb2, Y);
+    pb2.val(challenge) = beta;
+
+    permutation_gadget.generate_r1cs_witness();
+    pb2.set_input_sizes(1);
+
+    // generate keys for permutation gadget
+    start = libff::get_nsec_time();
+    r1cs_adaptive_snark_keypair<snark_pp> key2 = r1cs_adaptive_snark_generator(
+        pb2.get_constraint_system(),
+        ck,
+        2,
+        slot_size);
+    end = libff::get_nsec_time();
+    run_stats.generator_time = (end - start)/1000000000;
+
+    auto randomness = {rL, rR};
+    auto comms = {cm_left, cm_right};
+
+    start = libff::get_nsec_time();
+    auto proof2 = r1cs_adaptive_snark_prover(
+        key2.pk,
+        pb2.primary_input(),
+        pb2.auxiliary_input(),
+        randomness,
+        2,
+        slot_size);
+    end = libff::get_nsec_time();
+    run_stats.prover_time = (end - start) / 1000000000;
+
+    start = libff::get_nsec_time();
+    bool ok2 = r1cs_adaptive_snark_verifier(
+        key2.vk,
+        pb2.primary_input(),
+        comms,
+        2,
+        slot_size,
+        proof2);
+    end = libff::get_nsec_time();
+    run_stats.verifier_time = (end - start) / 1000000;
+    run_stats.num_constraints = pb2.num_constraints();
+    run_stats.status = ok2;
+
+    return run_stats;
+}
+
+template<typename ppT, typename FieldT = libff::Fr<ppT>, typename CommT = knowledge_commitment<libff::G1<ppT>, libff::G2<ppT>> >
 proto_stats execute_interactive_lookup_proto
 (
     const commitment_key<ppT>& ck,
@@ -353,7 +471,24 @@ proto_stats execute_interactive_lookup_proto
     lookup_stats.num_constraints = pb.num_constraints();
     lookup_stats.status = ok;
 
+    // now run the simultaneous permutation sub-protocol
+    auto cm_left = {cm_uL, cm_vL};
+    auto cm_right = {cm_uR, cm_vR};
+    auto vecs_left = {uL, vL};
+    auto vecs_right = {uR, vR};
+    auto rand_left = {ruL, rvL};
+    auto rand_right = {ruR, rvR};
+
+    sub_proto_stats = execute_simultaneous_perm_proto<snark_pp>(ck, slot_size, cm_left, cm_right, vecs_left, vecs_right, rand_left, rand_right);
+    lookup_stats.prover_time += sub_proto_stats.prover_time;
+    lookup_stats.verifier_time += sub_proto_stats.verifier_time;
+    lookup_stats.status &= sub_proto_stats.status;
+    lookup_stats.num_constraints += sub_proto_stats.num_constraints;
+
     return lookup_stats;
+
+
+
 }
 
 void run_interactive_lookup()

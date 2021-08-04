@@ -470,8 +470,8 @@ proto_stats execute_interactive_lookup_proto
     lookup_stats.status = ok;
 
     // now run the simultaneous permutation sub-protocol
-    auto cm_left = {cm_uL, cm_vL};
-    auto cm_right = {cm_uR, cm_vR};
+    std::vector<commT> cm_left = {cm_uL, cm_vL};
+    std::vector<commT> cm_right = {cm_uR, cm_vR};
     auto vecs_left = {uL, vL};
     auto vecs_right = {uR, vR};
     auto rand_left = {ruL, rvL};

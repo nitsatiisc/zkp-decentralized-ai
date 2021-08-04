@@ -26,7 +26,7 @@
 using namespace TrustedAI;
 using namespace libsnark;
 
-typedef libff::alt_bn128_pp snark_pp;
+typedef libff::edwards_pp snark_pp;
 typedef libff::Fr<snark_pp> FieldT;
 
 template <typename FieldT>

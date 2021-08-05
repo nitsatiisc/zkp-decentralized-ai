@@ -541,7 +541,7 @@ void run_interactive_filter_proto()
 
     long long start, end;
 
-    std::vector<size_t> Nvalues = {100, 1000, 10000, 100000;
+    std::vector<size_t> Nvalues = {100, 1000, 10000, 100000};
 
     for(size_t tn = 0; tn < Nvalues.size(); tn++)
     {

@@ -1082,7 +1082,7 @@ void run_interactive_decision_tree_proto()
         std::vector<CommT> commitments = {comm_table, cm_p, comm_vals};
         auto lookup_stats = execute_interactive_lookup_proto<snark_pp>(
             ck,
-            slot_size,
+            slot_size + n + 1,
             commitments,
             tree_table, access_pattern, vals,
             rand_table, rand_p, rand_vals
@@ -1102,9 +1102,9 @@ void run_interactive_decision_tree_proto()
 int main(int argc, char *argv[])
 {
     //run_interactive_lookup_proto();
-    run_interactive_filter_proto();
-    run_interactive_lookup();
-    run_interactive_inner_join_proto();
+    //run_interactive_filter_proto();
+    //run_interactive_lookup();
+    //run_interactive_inner_join_proto();
     run_interactive_decision_tree_proto();
     return 0;
 }

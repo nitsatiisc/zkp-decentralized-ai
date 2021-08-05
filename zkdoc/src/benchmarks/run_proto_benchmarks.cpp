@@ -26,7 +26,8 @@
 using namespace TrustedAI;
 using namespace libsnark;
 
-typedef libff::edwards_pp snark_pp;
+// choose ALT_BN128 curve (254 bit) for experiments
+typedef libff::alt_bn128_pp snark_pp;
 typedef libff::Fr<snark_pp> FieldT;
 
 template <typename FieldT>
@@ -45,6 +46,7 @@ unsigned int get_random_value(size_t n)
     return distrib(gen);
 }
 
+// stats for a protocol
 struct proto_stats {
     long long generator_time;
     long long prover_time;
@@ -53,7 +55,7 @@ struct proto_stats {
     bool status;
 };
 
-
+// example for filter protocol
 struct filter_example_type {
     unsigned int size;
     std::vector<size_t> source;
@@ -61,6 +63,7 @@ struct filter_example_type {
     std::vector<size_t> target;
 };
 
+// generate an example for filter protocol
 filter_example_type
 generate_filter_example(size_t n)
 {
@@ -80,6 +83,7 @@ generate_filter_example(size_t n)
     return example;
 }
 
+// generate merge transcript for inner join protocol
 struct merge_transcript {
     // result of join
     std::vector<size_t> p, q, r;
@@ -173,6 +177,12 @@ generate_merge_transcript(
 
 }
 
+// Generate a decision tree of specified size 
+// For benchmarking purposes, we simply have
+// a decision tree of 10 nodes and then 
+// extend it with dummy nodes to a given size.
+// the benchmarks do not depend on specific values
+// so this is good enough for benchmarking.
 template<typename FieldT>
 std::vector<std::vector<FieldT> > generate_decision_tree(size_t n)
 {
@@ -201,6 +211,11 @@ std::vector<std::vector<FieldT> > generate_decision_tree(size_t n)
     return tree_cols;
 }
 
+// Generates data with given number of samples for
+// testing decision tree inference. Again we have
+// 4 genuine records for corresponding to decision tree
+// of size 10 in the above function. For benchmarking we 
+// simply extend the data to using 0s to required size.
 template<typename FieldT>
 std::tuple<std::vector<FieldT>, std::vector<FieldT>>
 generate_data_vector(size_t n, size_t d, const std::vector<std::vector<FieldT>>& lagrangian_basis)
@@ -253,6 +268,12 @@ void allocate_slot(protoboard<FieldT>& pb, pb_variable_array<FieldT>& v, size_t 
 
 }
 
+// simulates interactive protocol for checking "simultaneous permutation"
+// property between two tuples of vectors over commitments.
+// ck is the global commitment key, slot_size is the size of commitment slots
+// comm_left and comm_right are commitments to the vectors in two tuples
+// The remaining arguments contain the actual vectors and randomness used to commit them
+// which are private inputs of the prover.
 template<typename ppT, typename FieldT = libff::Fr<ppT>, typename CommT = knowledge_commitment<libff::G1<ppT>, libff::G2<ppT>> >
 proto_stats execute_simultaneous_perm_proto
 (
@@ -365,6 +386,10 @@ proto_stats execute_simultaneous_perm_proto
     return run_stats;
 }
 
+// This simulates interactive protocol for checking lookup relation over committed vectors
+// ck is the global commitment key, slot_size is the size of commitment slots
+// committed_input is the vector of commitments to the table(L), access pattern (U) and values (V) respectively
+// the remaining arguments constitute actual vectors and randoness and are the private inputs of the prover.
 template<typename ppT, typename FieldT = libff::Fr<ppT>, typename CommT = knowledge_commitment<libff::G1<ppT>, libff::G2<ppT>> >
 proto_stats execute_interactive_lookup_proto
 (
@@ -482,6 +507,8 @@ proto_stats execute_interactive_lookup_proto
     return lookup_stats;
 }
 
+// benchmark lookup protocol for varying number of accesses
+// We fix the table size to N = 1000
 void run_interactive_lookup()
 {
     snark_pp::init_public_params();
@@ -490,9 +517,7 @@ void run_interactive_lookup()
     size_t N = 1000; // size of the table
     size_t slot_size;
 
-    std::ofstream ofile("interactive-lookup-benchmark-new.txt");
-    ofile << "N = " << N << std::endl;
-
+    std::ofstream ofile("interactive-lookup-benchmarks.txt");
     // m = number of lookups
     std::vector<size_t> mvalues = {100, 1000, 10000, 20000};
     for(size_t tn=0; tn < mvalues.size(); ++tn)
@@ -524,11 +549,12 @@ void run_interactive_lookup()
         std::vector<knowledge_commitment<libff::G1<snark_pp>, libff::G2<snark_pp>>> cm_vec = {cm_L, cm_U, cm_V};
 
         proto_stats run_stats = execute_interactive_lookup_proto<snark_pp>(ck, slot_size, cm_vec, L, U, V, rL, rU, rV);
-        ofile << run_stats.prover_time << " " << run_stats.verifier_time << " " << run_stats.num_constraints << " " << run_stats.status << std::endl;
+        ofile << N << " " << m << " " << run_stats.prover_time << " " << run_stats.verifier_time << " " << run_stats.num_constraints << " " << run_stats.status << std::endl;
     }
 
 }
 
+// Run the filter protocol for varying size of vector upper bounds (N)
 void run_interactive_filter_proto()
 {
     snark_pp::init_public_params();
@@ -537,7 +563,7 @@ void run_interactive_filter_proto()
 
     size_t slot_size;
 
-    std::ofstream ofile("filter-benchmarks.txt");
+    std::ofstream ofile("interactive-filter-benchmarks.txt");
 
     long long start, end;
 
@@ -664,6 +690,7 @@ void run_interactive_filter_proto()
     }
 }
 
+// Benchmark inner join protocol for different sizes of datasets (N)
 void run_interactive_inner_join_proto()
 {
     snark_pp::init_public_params();
@@ -671,7 +698,7 @@ void run_interactive_inner_join_proto()
     typedef knowledge_commitment<libff::G1<snark_pp>, libff::G2<snark_pp>> CommT;
     
     std::ofstream ofile("inner-join-benchmarks.txt");
-    std::vector<size_t> Nvalues = {100, 1000, 10000, 20000};
+    std::vector<size_t> Nvalues = {100, 1000, 10000, 50000};
 
     for (size_t tn = 0; tn < Nvalues.size(); tn++)
     {
@@ -918,16 +945,17 @@ void run_interactive_inner_join_proto()
     }
 }
 
+// run and benchmark interactive decision tree protocol
 void run_interactive_decision_tree_proto()
 {
     snark_pp::init_public_params();
     typedef libff::Fr<snark_pp> FieldT;
     typedef knowledge_commitment<libff::G1<snark_pp>, libff::G2<snark_pp>> CommT;
 
-    size_t N = 1000;
-    size_t h = 10;
-    size_t d = 50;
-    size_t bit_width = 32;
+    size_t N = 1000;    // maximum number of nodes in tree
+    size_t h = 10;      // height of the tree
+    size_t d = 50;      // number of features
+    size_t bit_width = 32;  // bits required to represent feature values
 
     auto tree_cols = generate_decision_tree<FieldT>(N);
     auto lagrangian_basis = compute_lagrange_polynomials<FieldT>(d);
@@ -935,7 +963,8 @@ void run_interactive_decision_tree_proto()
 
     std::ofstream ofile("interactive-decision-tree-benchmarks-shallow.txt");
 
-    std::vector<size_t> nvalues = {100, 1000, 2000};
+    // number of samples for different runs of the experiments
+    std::vector<size_t> nvalues = {100, 1000, 2000, 5000};
 
     for(size_t tn = 0; tn < 3; tn++)
     {
@@ -944,6 +973,7 @@ void run_interactive_decision_tree_proto()
         commitment_key<snark_pp> ck;
         ck.sample(1 + slot_size);
 
+        // generate interpolated data of given size (n x d)
         std::vector<FieldT> data_vector = std::get<0>(generate_data_vector<FieldT>(n, d, lagrangian_basis));
 
         protoboard<FieldT> pb;
@@ -954,6 +984,7 @@ void run_interactive_decision_tree_proto()
         data.allocate(pb, d*n, "data");
         predictions.allocate(pb, n, "predictions");
 
+        // assign vectors to commitment slots
         allocate_slot(pb, V, N, slot_size, "p");
         allocate_slot(pb, T, N, slot_size, "f");
         allocate_slot(pb, L, N, slot_size, "t");
@@ -967,6 +998,7 @@ void run_interactive_decision_tree_proto()
         allocate_slot(pb, r, h*n, slot_size, "r");
         allocate_slot(pb, c, h*n, slot_size, "c");
 
+        // gadget specifying Arithmetic Constraints for decision tree inference
         cp_decision_tree_gadget<FieldT> decision_tree(pb, h, bit_width, d, n, 
             data, predictions,
             V, T, L, R, C,
@@ -999,6 +1031,7 @@ void run_interactive_decision_tree_proto()
         for(size_t i=0; i < 11; ++i)
             rand_vec.emplace_back(FieldT::random_element());
         
+        // compute commitments
         auto cm_V = compute_commitment(ck, tree_cols[1], rand_vec[0]);
         auto cm_T = compute_commitment(ck, tree_cols[2], rand_vec[1]);
         auto cm_L = compute_commitment(ck, tree_cols[3], rand_vec[2]);
@@ -1032,6 +1065,7 @@ void run_interactive_decision_tree_proto()
         end = libff::get_nsec_time();
         auto prover_time = (end - start) / 1000000000;
 
+        // verify correctness of decision tree inference arithmetic part
         start = libff::get_nsec_time();
         bool ok = r1cs_adaptive_snark_verifier(
             key.vk,
@@ -1043,9 +1077,8 @@ void run_interactive_decision_tree_proto()
         end = libff::get_nsec_time();
         auto verifier_time = (end - start)/1000000;
 
-        // protocol to establish correctness of lookups in decision tree
+        // protocol to establish correctness of lookups in decision tree inference
         // Use optimization of talking random linear combination as the access patterns is common
-
         std::vector<FieldT> alpha(5);
         for(size_t i=0; i < alpha.size(); ++i)
             alpha[i] = FieldT::random_element();
@@ -1101,10 +1134,9 @@ void run_interactive_decision_tree_proto()
 
 int main(int argc, char *argv[])
 {
-    //run_interactive_lookup_proto();
-    //run_interactive_filter_proto();
-    //run_interactive_lookup();
-    //run_interactive_inner_join_proto();
+    run_interactive_filter_proto();
+    run_interactive_lookup();
+    run_interactive_inner_join_proto();
     run_interactive_decision_tree_proto();
     return 0;
 }

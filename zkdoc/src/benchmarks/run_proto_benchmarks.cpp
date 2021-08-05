@@ -533,7 +533,7 @@ void run_interactive_filter_proto()
 {
     snark_pp::init_public_params();
     typedef libff::Fr<snark_pp> FieldT;
-    typedef knowledge_commitment<libff::G1<ppT>, libff::G2<ppT>> CommT;
+    typedef knowledge_commitment<libff::G1<snark_pp>, libff::G2<snark_pp>> CommT;
 
     size_t slot_size;
 

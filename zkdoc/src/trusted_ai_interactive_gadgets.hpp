@@ -279,7 +279,7 @@ void interactive_lookup_arithmetic<FieldT>::generate_r1cs_constraints()
 
     std::vector<FieldT> coefficients(less_.size(), FieldT::one());
     this->pb.add_r1cs_constraint(
-        r1cs_constraint<FieldT>(pb_coeff_sum(pb_linear_combination_array<FieldT>(less_.begin(), less_.end()), coefficients), 1, 0),
+        r1cs_constraint<FieldT>(pb_coeff_sum(pb_linear_combination_array<FieldT>(less_), coefficients), 1, 0),
         "sorted order"
     );
 

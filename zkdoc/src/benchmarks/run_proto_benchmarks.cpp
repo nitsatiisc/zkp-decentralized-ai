@@ -940,7 +940,7 @@ void run_interactive_decision_tree_proto()
     for(size_t tn = 0; tn < 3; tn++)
     {
         size_t n = nvalues[tn];
-        size_t slot_size = h*n + 1;
+        size_t slot_size = h*n + N + 1;
         commitment_key<snark_pp> ck;
         ck.sample(1 + slot_size);
 
@@ -1082,7 +1082,7 @@ void run_interactive_decision_tree_proto()
         std::vector<CommT> commitments = {comm_table, cm_p, comm_vals};
         auto lookup_stats = execute_interactive_lookup_proto<snark_pp>(
             ck,
-            slot_size + n + 1,
+            slot_size + N + 1,
             commitments,
             tree_table, access_pattern, vals,
             rand_table, rand_p, rand_vals

@@ -494,7 +494,7 @@ void run_interactive_lookup()
     ofile << "N = " << N << std::endl;
 
     // m = number of lookups
-    std::vector<size_t> mvalues = {100, 1000, 10000, 100000};
+    std::vector<size_t> mvalues = {100, 1000, 10000, 20000};
     for(size_t tn=0; tn < mvalues.size(); ++tn)
     {
         size_t m = mvalues[tn];
@@ -533,6 +533,7 @@ void run_interactive_filter_proto()
 {
     snark_pp::init_public_params();
     typedef libff::Fr<snark_pp> FieldT;
+    typedef knowledge_commitment<libff::G1<ppT>, libff::G2<ppT>> CommT;
 
     size_t slot_size;
 
@@ -540,12 +541,12 @@ void run_interactive_filter_proto()
 
     long long start, end;
 
-    std::vector<size_t> Nvalues = {100, 1000, 10000, 100000, 1000000};
+    std::vector<size_t> Nvalues = {100, 1000, 10000, 100000;
 
     for(size_t tn = 0; tn < Nvalues.size(); tn++)
     {
         size_t N = Nvalues[tn];
-        slot_size = N+10;
+        slot_size = N+1;
         commitment_key<snark_pp> ck;
         ck.sample(1+slot_size);
 
@@ -643,80 +644,22 @@ void run_interactive_filter_proto()
         auto verifier_time = (end - start)/1000000;
 
         // prove simultaneous permutation between (tilde_f, U) and (delta, V)
-        auto alpha = FieldT::random_element();
-        auto beta = FieldT::random_element();
+        std::vector<CommT> comm_left = {cm_tilde_f, cm_U};
+        std::vector<CommT> comm_right = {cm_delta, cm_V};
+        std::vector<std::vector<FieldT>> vecs_left = {val_tilde_f, val_U};
+        std::vector<std::vector<FieldT>> vecs_right = {val_delta, val_V};
+        std::vector<FieldT> rand_left = {r_tilde_f, r_U};
+        std::vector<FieldT> rand_right = {r_delta, r_V};
 
-        // P & V compute
-        auto cl = cm_tilde_f + alpha * cm_U;
-        auto cr = cm_delta +  alpha * cm_V;
-
-        auto rl = r_tilde_f + alpha * r_U;
-        auto rr = r_delta + alpha * r_V;
-
-        protoboard<FieldT> pb2;
+        proto_stats sub_proto_stats = execute_simultaneous_perm_proto(ck, slot_size, comm_left, comm_right, vecs_left, vecs_right, rand_left, rand_right);
         
-        pb_variable<FieldT> challenge;
-        pb_variable_array<FieldT> input, output;
-
-        challenge.allocate(pb2, "challenge");
-        allocate_slot(pb2, input, N, slot_size, "input");
-        allocate_slot(pb2, output, N, slot_size, "output");
-
-        interactive_permutation_gadget<FieldT> permutation_gadget(pb2, challenge, input, output, "permutation test");
-        permutation_gadget.generate_r1cs_constraints();
-
-        // generate witness
-        for(size_t i=0; i < input.size(); ++i)
-        {
-            pb2.val(input[i]) = pb.val(tilde_f[i]) + alpha * pb.val(U[i]);
-            pb2.val(output[i]) = pb.val(delta[i]) + alpha * pb.val(V[i]);
-        }
-
-        pb2.val(challenge) = beta;
-
-        permutation_gadget.generate_r1cs_witness();
-        pb2.set_input_sizes(1);
-
-        // generate keys for permutation gadget
-        r1cs_adaptive_snark_keypair<snark_pp> key2 = r1cs_adaptive_snark_generator(
-        pb2.get_constraint_system(),
-        ck,
-        2,
-        slot_size); 
-        
-        auto randomness2 = {rl, rr};
-        auto comms2 = {cl, cr};
-
-        start = libff::get_nsec_time();
-        auto proof2 = r1cs_adaptive_snark_prover(
-            key2.pk,
-            pb2.primary_input(),
-            pb2.auxiliary_input(),
-            randomness2,
-            2,
-            slot_size            
-        );
-        end = libff::get_nsec_time();
-        auto prover_time2 = (end - start)/1000000000;
+        long long t_prover_time = prover_time + sub_proto_stats.prover_time;
+        long long t_verifier_time = verifier_time + sub_proto_stats.verifier_time;
+        long long t_constraints = pb.num_constraints() + sub_proto_stats.num_constraints;
+        bool status = ok & sub_proto_stats;
 
 
-        start = libff::get_nsec_time();
-        bool ok2 = r1cs_adaptive_snark_verifier(
-            key2.vk,
-            pb2.primary_input(),
-            comms2,
-            2,
-            slot_size,
-            proof2
-        );
-        end = libff::get_nsec_time();
-        auto verifier_time2 = (end - start)/1000000;
-
-
-        ofile << N << " " << prover_time << " " << 
-            prover_time2 << " " << verifier_time << " " << verifier_time2 << " " << 
-            pb.num_constraints() << " " << pb2.num_constraints() << " " 
-            << ok << " " << ok2 << std::endl;
+        ofile << N << " " << t_prover_time << " " << t_verifier_time " " << t_constraints << " " << status << std::endl;
 
     }
 }
@@ -728,7 +671,7 @@ void run_interactive_inner_join_proto()
     typedef knowledge_commitment<libff::G1<snark_pp>, libff::G2<snark_pp>> CommT;
     
     std::ofstream ofile("inner-join-benchmarks.txt");
-    std::vector<size_t> Nvalues = {100, 100000};
+    std::vector<size_t> Nvalues = {100, 1000, 10000, 20000};
 
     for (size_t tn = 0; tn < Nvalues.size(); tn++)
     {
@@ -979,6 +922,7 @@ void run_interactive_decision_tree_proto()
 {
     snark_pp::init_public_params();
     typedef libff::Fr<snark_pp> FieldT;
+    typedef knowledge_commitment<libff::G1<ppT>, libff::G2<ppT>> CommT;
 
     size_t N = 1000;
     size_t h = 10;
@@ -991,7 +935,7 @@ void run_interactive_decision_tree_proto()
 
     std::ofstream ofile("interactive-decision-tree-benchmarks-shallow.txt");
 
-    std::vector<size_t> nvalues = {100, 1000, 5000};
+    std::vector<size_t> nvalues = {100, 1000, 2000};
 
     for(size_t tn = 0; tn < 3; tn++)
     {
@@ -1023,8 +967,6 @@ void run_interactive_decision_tree_proto()
         allocate_slot(pb, r, h*n, slot_size, "r");
         allocate_slot(pb, c, h*n, slot_size, "c");
 
-
-
         cp_decision_tree_gadget<FieldT> decision_tree(pb, h, bit_width, d, n, 
             data, predictions,
             V, T, L, R, C,
@@ -1043,11 +985,33 @@ void run_interactive_decision_tree_proto()
 
         decision_tree.generate_r1cs_witness();
 
+        std::vector<std::vector<FieldT>> lookup_vals(5);
+        lookup_vals[0] = f.get_vals(pb);
+        lookup_vals[1] = t.get_vals(pb);
+        lookup_vals[2] = l.get_vals(pb);
+        lookup_vals[3] = r.get_vals(pb);
+        lookup_vals[4] = c.get_vals(pb);
+
+        auto access_pattern = p.get_vals(pb);
+
         pb.set_input_sizes(d*n + n); // data + predictions are public
         std::vector<FieldT> rand_vec;
         for(size_t i=0; i < 11; ++i)
             rand_vec.emplace_back(FieldT::random_element());
         
+        auto cm_V = compute_commitment(ck, tree_cols[1], rand_vec[0]);
+        auto cm_T = compute_commitment(ck, tree_cols[2], rand_vec[1]);
+        auto cm_L = compute_commitment(ck, tree_cols[3], rand_vec[2]);
+        auto cm_R = compute_commitment(ck, tree_cols[4], rand_vec[3]);
+        auto cm_C = compute_commitment(ck, tree_cols[5], rand_vec[4]);
+        auto cm_p = compute_commitment(ck, access_pattern, rand_vec[5]);
+        auto cm_f = compute_commitment(ck, lookup_vals[0], rand_vec[6]);
+        auto cm_t = compute_commitment(ck, lookup_vals[1], rand_vec[7]);
+        auto cm_l = compute_commitment(ck, lookup_vals[2], rand_vec[8]);
+        auto cm_r = compute_commitment(ck, lookup_vals[3], rand_vec[9]);
+        auto cm_c = compute_commitment(ck, lookup_vals[4], rand_vec[10]);
+
+        std::vector<CommT> cm_vec = {cm_V, cm_T, cm_L, cm_R, cm_C, cm_p, cm_f, cm_t, cm_l, cm_r, cm_c};
 
         // generate keys
         r1cs_adaptive_snark_keypair<snark_pp> key = r1cs_adaptive_snark_generator(
@@ -1068,7 +1032,68 @@ void run_interactive_decision_tree_proto()
         end = libff::get_nsec_time();
         auto prover_time = (end - start) / 1000000000;
 
-        ofile << n << " " << prover_time << " " << pb.num_constraints() << std::endl;
+        start = libff::get_nsec_time();
+        bool ok = r1cs_adaptive_snark_verifier(
+            key.vk,
+            pb.primary_input(), 
+            cm_vec, 
+            11, 
+            slot_size,
+            proof);
+        end = libff::get_nsec_time();
+        auto verifier_time = (end - start)/1000000;
+
+        // protocol to establish correctness of lookups in decision tree
+        // Use optimization of talking random linear combination as the access patterns is common
+
+        std::vector<FieldT> alpha(5);
+        for(size_t i=0; i < alpha.size(); ++i)
+            alpha[i] = FieldT::random_element();
+        
+        // take alpha linear combination of tree_cols (V,T,L,R,C) and lookup_vals
+        std::vector<FieldT> tree_table(V.size()), vals(p.size());
+        for(size_t i=0; i < tree_table.size(); ++i)
+        {
+            tree_table[i] = FieldT::zero();
+            for(size_t j=0; j < alpha.size(); ++j)
+                tree_table[i] = tree_table[i] + (alpha[j] * tree_cols[j+1][i]);
+        }
+        
+        for(size_t i=0; i < vals.size(); ++i)
+        {
+            vals[i] = FieldT::zero();
+            for(size_t j=0; j < alpha.size(); ++j)
+                vals[i] = vals[i] + (alpha[j] * lookup_vals[j][i]);
+        }
+
+        auto comm_table = (alpha[0] * cm_V) + (alpha[1] * cm_T) + (alpha[2] * cm_L) + (alpha[3] * cm_R) + (alpha[4] * cm_C);
+        auto comm_vals = (alpha[0] * cm_f) + (alpha[1] * cm_t) + (alpha[2] * cm_l) + (alpha[3] * cm_r) + (alpha[4] * cm_c);
+        FieldT rand_table, rand_p, rand_vals;
+        rand_table = FieldT::zero();
+        rand_vals = FieldT::zero();
+        rand_p = rand_vec[5];
+
+        for(size_t i=0; i < alpha.size(); ++i)
+        {
+            rand_table = rand_table + (alpha[i] * rand_vec[i]);
+            rand_vals = rand_vals + (alpha[i] * rand_vec[6+i]);
+        }
+
+        std::vector<CommT> commitments = {comm_table, cm_p, comm_vals};
+        lookup_stats = execute_interactive_lookup_proto<snark_pp>(
+            ck,
+            slot_size,
+            commitments,
+            tree_table, access_pattern, vals,
+            rand_table, rand_p, rand_vals
+        );
+
+        auto t_prover_time = prover_time + lookup_stats.prover_time;
+        auto t_verifier_time = verifier_time + lookup_stats.verifier_time;
+        auto t_constraints = pb.num_constraints() + lookup_stats.num_constraints;
+        auto status = ok & lookup_stats.status;
+
+        ofile << n << " " << t_prover_time << " " << t_verifier_time << " " << t_constraints << " " << status << std::endl;
     }
 
 }
@@ -1077,9 +1102,9 @@ void run_interactive_decision_tree_proto()
 int main(int argc, char *argv[])
 {
     //run_interactive_lookup_proto();
-    //run_interactive_filter_proto();
-    //run_interactive_lookup();
+    run_interactive_filter_proto();
+    run_interactive_lookup();
     run_interactive_inner_join_proto();
-    //run_interactive_decision_tree_proto();
+    run_interactive_decision_tree_proto();
     return 0;
 }

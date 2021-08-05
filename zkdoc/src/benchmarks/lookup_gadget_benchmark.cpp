@@ -728,7 +728,7 @@ void run_interactive_inner_join_proto()
     typedef knowledge_commitment<libff::G1<snark_pp>, libff::G2<snark_pp>> CommT;
     
     std::ofstream ofile("inner-join-benchmarks.txt");
-    std::vector<size_t> Nvalues = {100, 100000};
+    std::vector<size_t> Nvalues = {100, 10000};
 
     for (size_t tn = 0; tn < Nvalues.size(); tn++)
     {
@@ -1078,8 +1078,8 @@ int main(int argc, char *argv[])
 {
     //run_interactive_lookup_proto();
     //run_interactive_filter_proto();
+    run_interactive_lookup();
     run_interactive_inner_join_proto();
-    //run_interactive_lookup();
     //run_interactive_decision_tree_proto();
     return 0;
 }

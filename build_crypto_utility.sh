@@ -1,5 +1,5 @@
 #/bin/bash
 mkdir -p ./build
 pushd ./build
-cmake .. && make lookup_gadget_benchmark
+cmake .. && make run_proto_benchmarks
 popd

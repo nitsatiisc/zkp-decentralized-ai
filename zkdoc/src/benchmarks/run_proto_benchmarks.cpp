@@ -659,7 +659,7 @@ void run_interactive_filter_proto()
         bool status = ok & sub_proto_stats.status;
 
 
-        ofile << N << " " << t_prover_time << " " << t_verifier_time " " << t_constraints << " " << status << std::endl;
+        ofile << N << " " << t_prover_time << " " << t_verifier_time << " " << t_constraints << " " << status << std::endl;
 
     }
 }

@@ -656,7 +656,7 @@ void run_interactive_filter_proto()
         long long t_prover_time = prover_time + sub_proto_stats.prover_time;
         long long t_verifier_time = verifier_time + sub_proto_stats.verifier_time;
         long long t_constraints = pb.num_constraints() + sub_proto_stats.num_constraints;
-        bool status = ok & sub_proto_stats;
+        bool status = ok & sub_proto_stats.status;
 
 
         ofile << N << " " << t_prover_time << " " << t_verifier_time " " << t_constraints << " " << status << std::endl;

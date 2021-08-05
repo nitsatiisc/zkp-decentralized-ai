@@ -1080,7 +1080,7 @@ void run_interactive_decision_tree_proto()
         }
 
         std::vector<CommT> commitments = {comm_table, cm_p, comm_vals};
-        lookup_stats = execute_interactive_lookup_proto<snark_pp>(
+        auto lookup_stats = execute_interactive_lookup_proto<snark_pp>(
             ck,
             slot_size,
             commitments,

@@ -14,13 +14,62 @@ The repository contains:
 --------------------------------------------------------------------------------
 Repository Overview
 --------------------------------------------------------------------------------
+The directory structure of the repository is as follows:
 
+* [__zkdoc__](zkdoc):
+    * [__src__](zkdoc/src): Containing descriptions of circuits for key NP relations.
+        * [__adaptive-snark__](zkdoc/src/adaptive-snark): Commit and Prove extension of Pinocchio zkSNARK implementation in libsnark.
+        * [__benchmarks__](zkdoc/src/benchmarks): Containing utility to run the benchmarks
+    
+* [__depends__](depends): This folder gets generated and populated by installation scripts automatically. It contains external dependencies.
+
+
+
+The directory [__zkdoc/src__](zkdoc/src) contains most of the Arithmetic Circuits required for the protocols.
+* The file [__zkdoc/src/trusted_ai_utility_gadgets.hpp__](zkdoc/src/trusted_ai_utility_gadgets.hpp) contains descriptions of Arithmetic Circuits for common operations such as _polynomial evaluation_, _hadamard product_ etc. It also contains routines for interpolating polynomials (used in Section 6 of the paper).
+* The file [__zkdoc/src/trusted_ai_interactive_gadgets.hpp__](zkdoc/src/trusted_ai_interactive_gadgets.hpp) contains Arithmetic Circuits for key protocols such as "Simulataneous Permutation Check" and "Memory Access Check" as described in Section 4 of the paper.
+* The file [__zkdoc/src/trusted_ai_cp_gadgets.hpp__](zkdoc/src/trusted_ai_cp_gadgets.hpp) contains Arithmetic Circuits encoding key dataset operations such as filter, inner-join (Section 5 of the paper) as well as decision tree inference (Section 6). 
+
+The directory [__zkdoc/src/adaptive_snark__](zkdoc/src/adaptive_snark) contains implementation of commit and prove zkSNARK based on scheme described in \[Vee17].
+* The file [__zkdoc/src/adaptive_snark/r1cs_adapative_snark.hpp__](zkdoc/src/adaptive_snark/r1cs_adaptive_snark.hpp) contains the implementation of generator, prover and verifier by extending the existing implementation available in _libsnark_. In addition to the circuit specification and the number of public inputs, the generator algorithm takes further two parameters: number of commitment slots (parts of witness which will open a public commitment) and the size of commitment slots. Although in principle, commitment slots can have different sizes, to simplifiy the implementation we assume all slots have the same size (we add dummy variables forced to be 0 when the variables of interest do not exhaust a commitment slot). 
+* The file [__zkdoc/src/adaptive_snark/trapdoor_commitment.hpp__](zkdoc/src/adaptive_snark/trapdoor_commitment.hpp) contains the associated commitment scheme.
+
+Finally, the file [__zkdoc/src/benchmarks/run_proto_benchmarks.hpp__] contains code invoking different protocols for different parameters.
 
 
 --------------------------------------------------------------------------------
 Building and Running Benchmarks
 --------------------------------------------------------------------------------
+The repository includes scripts to easily build and run benchmarks on a Linux System. The following instructions have been tested on Ubuntu 20.04 LTS with
+git installed.
 
+* Clone the repository.
+
+   $ git clone https://github.com/nitsatiisc/zkp-decentralized-ai.git
+   
+* Under the repository root run the following script to install dependencies. This may require elevated priviledges.
+
+   $ /bin/sh install_sandbox_dependencies.sh
+
+* Fetch external projects (such as [https://github.com/scipr-lab/libsnark](libsnark)).
+
+   $ /bin/sh fetch_dependencies.sh
+
+* Build the external projects.
+
+   $ /bin/sh build_sandbox_dependencies.sh
+   
+* Build the benchmarking binary
+
+   $ /bin/sh build_crypto_utility.sh
+   
+The above steps create a depends folder under the repository root where all external projects are pulled. It also creates a build folder under which the benchmarking utility is built. 
+
+* Run the benchmarks using:
+
+   $ ./build/zkdoc/run_proto_benchmarks
+
+* After the benchmarks run (which can take quite a while), additional files containing the statistics of the protocols (e.g prover time, verifier time, number of gates in the circuit) are created in the folder where the benchmarking script was invoked (Note that the total run time of the script is greater than the proving times reported in the paper, as one time parameters are re-generated for each set of parameters).
 
 --------------------------------------------------------------------------------
 Protocols Benchmarked
@@ -33,102 +82,10 @@ Circuit Descriptions
 --------------------------------------------------------------------------------
 
 
-
---------------------------------------------------------------------------------
-Directory structure
---------------------------------------------------------------------------------
-
-The directory structure of the repository is as follows:
-
-* [__zkdoc__](zkdoc):
-    * [__src__](zkdoc/src): Containing descriptions of circuits for key NP relations.
-        * [__adaptive-snark__](zkdoc/src/adaptive-snark): Commit and Prove extension of Pinocchio zkSNARK implementation in libsnark.
-        * [__benchmarks__](zkdoc/src/benchmarks): Containing utility to run the benchmarks
-    
-* [__depends__](depends): This folder gets generated and populated by installation scripts automatically. It contains external dependencies.
-
-
 --------------------------------------------------------------------------------
 References
 --------------------------------------------------------------------------------
 
-\[BBFR15] [
-  _ADSNARK: nearly practical and privacy-preserving proofs on authenticated data_
-](https://eprint.iacr.org/2014/617),
-  Michael Backes, Manuel Barbosa, Dario Fiore, Raphael M. Reischuk,
-  IEEE Symposium on Security and Privacy (Oakland) 2015
-
-\[BCCT12] [
-  _From extractable collision resistance to succinct non-Interactive arguments of knowledge, and back again_
-](http://eprint.iacr.org/2011/443),
-  Nir Bitansky, Ran Canetti, Alessandro Chiesa, Eran Tromer,
-  Innovations in Computer Science (ITCS) 2012
-
-\[BCCT13] [
-  _Recursive composition and bootstrapping for SNARKs and proof-carrying data_
-](http://eprint.iacr.org/2012/095)
-  Nir Bitansky, Ran Canetti, Alessandro Chiesa, Eran Tromer,
-  Symposium on Theory of Computing (STOC) 13
-
-\[BCGTV13] [
-  _SNARKs for C: Verifying Program Executions Succinctly and in Zero Knowledge_
-](http://eprint.iacr.org/2013/507),
-  Eli Ben-Sasson, Alessandro Chiesa, Daniel Genkin, Eran Tromer, Madars Virza,
-  CRYPTO 2013
-
-\[BCIOP13] [
-  _Succinct non-interactive arguments via linear interactive Proofs_
-](http://eprint.iacr.org/2012/718),
-  Nir Bitansky, Alessandro Chiesa, Yuval Ishai, Rafail Ostrovsky, Omer Paneth,
-  Theory of Cryptography Conference 2013
-
-\[BCTV14a] [
-  _Succinct non-interactive zero knowledge for a von Neumann architecture_
-](http://eprint.iacr.org/2013/879),
-  Eli Ben-Sasson, Alessandro Chiesa, Eran Tromer, Madars Virza,
-  USENIX Security 2014
-
-\[BCTV14b] [
-  _Scalable succinct non-interactive arguments via cycles of elliptic curves_
-](https://eprint.iacr.org/2014/595),
-  Eli Ben-Sasson, Alessandro Chiesa, Eran Tromer, Madars Virza,
-  CRYPTO 2014
-
-\[CTV15] [
-  _Cluster computing in zero knowledge_
-](https://eprint.iacr.org/2015/377),
-  Alessandro Chiesa, Eran Tromer, Madars Virza,
-  Eurocrypt 2015
-
-\[DFGK14] [
-  Square span programs with applications to succinct NIZK arguments
-](https://eprint.iacr.org/2014/718),
-  George Danezis, Cedric Fournet, Jens Groth, Markulf Kohlweiss,
-  ASIACCS 2014
-
-\[Groth16] [
-  On the Size of Pairing-based Non-interactive Arguments
-](https://eprint.iacr.org/2016/260),
-  Jens Groth,
-  EUROCRYPT 2016
-
-\[GM17] [
-  Snarky Signatures: Minimal Signatures of Knowledge from Simulation-Extractable
-  SNARKs
-](https://eprint.iacr.org/2017/540),
-  Jens Groth and Mary Maller,
-  IACR-CRYPTO-2017
-
-\[GGPR13] [
-  _Quadratic span programs and succinct NIZKs without PCPs_
-](http://eprint.iacr.org/2012/215),
-  Rosario Gennaro, Craig Gentry, Bryan Parno, Mariana Raykova,
-  EUROCRYPT 2013
-
-\[ate-pairing] [
-  _High-Speed Software Implementation of the Optimal Ate Pairing over Barreto-Naehrig Curves_
-](https://github.com/herumi/ate-pairing),
-  MITSUNARI Shigeo, TERUYA Tadanori
 
 \[PGHR13] [
   _Pinocchio: Nearly Practical Verifiable Computation_

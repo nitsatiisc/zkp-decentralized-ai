@@ -375,11 +375,6 @@ class cp_inner_join_gadget : public gadget<FieldT>
 				)
 			);
 		}
-
-		// T[i] = (Y[i] = Z[i]).(I[i]-s-1).(J[i]-t-1)
-		// 1 - S[i] = T[i].K[i]
-		// K[i].L[i] = 1
-
 	};
 
 	void generate_r1cs_constraints()
@@ -414,9 +409,6 @@ class cp_inner_join_gadget : public gadget<FieldT>
 
 		for(size_t i=0; i < trsize - 1; ++i)
 		{
-			//this->pb.add_r1cs_constraint(
-			//	r1cs_constraint<FieldT>(s1_ + t1_ - tr_I_[i] - tr_J_[i], 1, tr_O_[i+1]), "O=(s+t-idx_i-idx_j)"
-			//);
 
 			this->pb.add_r1cs_constraint(
 				r1cs_constraint<FieldT>(tr_I_[i] + incr_i_[i], 1, tr_I_[i+1]), "increment I"
@@ -685,12 +677,10 @@ class cp_decision_tree_gadget : public gadget<FieldT>
 				this->pb.val(r_[i*h_ + j]) = right_id;
 				this->pb.val(c_[i*h_ + j]) = label;
 
-
 				poly_gadgets_[i*h_ + j].generate_r1cs_witness();
 				comparators_[i*h_ + j].generate_r1cs_witness();
 
 				size_t value = static_cast<size_t>(this->pb.val(v_[i*h_ + j]).as_ulong());
-				// std::cout << node_id << " " << var_id << " " << thr << ":" << value << " " << left_id << " " << right_id << " " << label << std::endl;
 
 				if (j < h_ - 1)
 				{

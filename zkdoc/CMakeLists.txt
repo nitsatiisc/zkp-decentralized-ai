@@ -21,9 +21,9 @@ set(RAPIDCSV_DIRECTORY
 	${CMAKE_SOURCE_DIR}/depends/rapidcsv/src
 )
 
-add_executable(lookup_gadget_benchmark src/benchmarks/lookup_gadget_benchmark.cpp)
+add_executable(run_proto_benchmarks src/benchmarks/run_proto_benchmarks.cpp)
 target_include_directories(
-    lookup_gadget_benchmark
+    run_proto_benchmarks
     PUBLIC
 
     ${LIBFF_LIBSNARK_DIRECTORY}
@@ -31,7 +31,7 @@ target_include_directories(
     ${LIBSNARK_DIRECTORY}
 )
 target_link_libraries(
-    lookup_gadget_benchmark
+    run_proto_benchmarks
     
     ${GMPXX_LIBRARIES}
     ${GMP_LIBRARIES}

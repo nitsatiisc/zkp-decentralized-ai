@@ -147,30 +147,6 @@ std::vector<FieldT> interpolate_polynomial(const std::vector<uint64_t>& v, const
     return interpolation_polynomial;
 }
 
-/*
-template<typename FieldT, size_t N, size_t M>
-std::vector<pb_variable_array<FieldT>> 
-get_rows(std::shared_ptr<data_source_integer<FieldT, N, M>> dsi)
-{
-    std::vector<pb_variable_array<FieldT>> rows;
-    std::vector<std::vector<pb_variable<FieldT>>> variables(M);
-    std::vector<std::vector<pb_variable<FieldT>>> transpose(N);
-
-    for(size_t i=0; i < M; ++i)
-        variables[i] = dsi->columns_[i]->get_pb_vals();
-
-    for(size_t j=0; j < N; ++j)
-        for(size_t i=0; i < M; ++i)
-            transpose[j].emplace_back(variables[i][j]);
-    
-    for(size_t i=0; i < N; ++i)
-        rows.emplace_back(pb_variable_array<FieldT>(transpose[i].begin(), transpose[i].end()));
-
-
-    return rows;    
-}
-*/
-
 template<typename FieldT>
 class size_enforcing_gadget : public gadget<FieldT> {
 public:

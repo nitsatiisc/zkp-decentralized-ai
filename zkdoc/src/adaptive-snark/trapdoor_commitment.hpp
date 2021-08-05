@@ -170,7 +170,4 @@ bool verify_commitment(
 
 } // namespace
 
-
-
-
 #endif

@@ -134,11 +134,6 @@ class interactive_lookup_arithmetic : public gadget<FieldT>
     pb_variable_array<FieldT> L_, U_, V_, u_, v_, sorted_u_, perm_v_;
     pb_variable_array<FieldT> less_, less_eq_;
     std::vector<comparison_gadget<FieldT>> compare_;
-    //pb_variable_array<FieldT> diff_; 
-    //std::vector<pb_variable_array<FieldT>> sorted_u_bits_;
-    //std::vector<pb_variable_array<FieldT>> diff_bits_;   
-    //std::vector<packing_gadget<FieldT>> pack_diff_;
-    //std::vector<packing_gadget<FieldT>> pack_sorted_u_;
 };
 
 template<typename FieldT>
@@ -168,29 +163,6 @@ interactive_lookup_arithmetic<FieldT>::interactive_lookup_arithmetic(
     assert(perm_v_.size() == M+N);
 
     size_t W = libff::log2(N);
-
-    //diff_.allocate(this->pb, M+N-1, "diff");
-
-    //sorted_u_bits_.resize(M+N);
-    //for(size_t i=0; i < sorted_u_bits_.size(); ++i) 
-    //    sorted_u_bits_[i].allocate(this->pb, W, "sorted_u_bits");
-    
-    //diff_bits_.resize(M+N-1);
-    //for(size_t i=0; i < diff_bits_.size(); ++i)
-    //    diff_bits_[i].allocate(this->pb, W, "diff_bits");
-
-    //for(size_t i=0; i < sorted_u_.size(); ++i)
-    //{
-    //    pack_sorted_u_.emplace_back(
-    //        packing_gadget<FieldT>(this->pb, sorted_u_bits_[i], sorted_u_[i], "pack sorted bits")
-    //    );
-    //}
-
-    //for(size_t i=0; i < diff_.size(); ++i)
-    //{
-    //    pack_diff_.emplace_back(
-    //        packing_gadget<FieldT>(this->pb, diff_bits_[i], diff_[i], "pack diff")
-    //    );
     less_.allocate(this->pb, sorted_u_.size() - 1, "less");
     less_eq_.allocate(this->pb, sorted_u_.size() - 1, "less_eq");
     for(size_t i=0; i < less_.size(); ++i)
@@ -256,24 +228,7 @@ void interactive_lookup_arithmetic<FieldT>::generate_r1cs_constraints()
 
     }
 
-    //for(size_t i=0; i < M+N-1; ++i)
-    //{
-    //    this->pb.add_r1cs_constraint(
-    //        r1cs_constraint<FieldT>(
-    //            diff_[i] + sorted_u_[i],
-    //            1,
-    //            sorted_u_[i+1]
-    //        ), "diff constraint"
-    //    );
-
-    //}
-
-    //for(size_t i=0; i < M+N; ++i)
-    //    pack_sorted_u_[i].generate_r1cs_constraints(true);
-    
-    //for(size_t i=0; i < M+N-1; ++i)
-    //    pack_diff_[i].generate_r1cs_constraints(true);
-
+    // monotonocity constraints
     for(size_t i=0; i < compare_.size(); ++i)
         compare_[i].generate_r1cs_constraints();
 
@@ -318,20 +273,10 @@ void interactive_lookup_arithmetic<FieldT>::generate_r1cs_witness()
         this->pb.val(perm_v_[ perm[i] ])= this->pb.val(v_[i]);
     }
 
-    //for(size_t i=0; i < M+N-1; ++i)
-    //        this->pb.val(diff_[i]) = this->pb.val(sorted_u_[i+1]) - this->pb.val(sorted_u_[i]);
-
-    //for(size_t i=0; i < M+N; ++i)
-    //    pack_sorted_u_[i].generate_r1cs_witness_from_packed();
-    
-    //for(size_t i=0; i < M+N-1; ++i)
-    //    pack_diff_[i].generate_r1cs_witness_from_packed();
-
     for(size_t i=0; i < compare_.size(); ++i)
         compare_[i].generate_r1cs_witness();
     
 }
-
 
 } // end of namespace
 

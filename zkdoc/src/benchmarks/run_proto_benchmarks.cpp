@@ -922,7 +922,7 @@ void run_interactive_decision_tree_proto()
 {
     snark_pp::init_public_params();
     typedef libff::Fr<snark_pp> FieldT;
-    typedef knowledge_commitment<libff::G1<ppT>, libff::G2<ppT>> CommT;
+    typedef knowledge_commitment<libff::G1<snark_pp>, libff::G2<snark_pp>> CommT;
 
     size_t N = 1000;
     size_t h = 10;

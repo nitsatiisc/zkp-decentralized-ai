@@ -7,8 +7,7 @@ The repository contains:
 - specification of Arithmetic circuits for different NP relations discussed in the paper using libsnark backend.
 - Extension of Pinocchio protocol to support commit and prove capabilities based on Adaptive-Pinocchio scheme in the paper (Adaptive Pinocchio).
 
-[TOC]
-
+This code is being released under MIT License (see [__LICENSE__](LICENSE) file).
 
 
 --------------------------------------------------------------------------------

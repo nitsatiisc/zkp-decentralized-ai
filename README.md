@@ -18,7 +18,7 @@ The directory structure of the repository is as follows:
 
 * [__zkdoc__](zkdoc):
     * [__src__](zkdoc/src): Containing descriptions of circuits for key NP relations.
-        * [__adaptive-snark__](zkdoc/src/adaptive-snark): Commit and Prove extension of Pinocchio zkSNARK implementation in libsnark.
+        * [__adaptive-snark__](zkdoc/src/adaptive-snark): Commit and Prove extension of Pinocchio \[PGHR13] zkSNARK implementation in \[libsnark].
         * [__benchmarks__](zkdoc/src/benchmarks): Containing utility to run the benchmarks
     
 * [__depends__](depends): This folder gets generated and populated by installation scripts automatically. It contains external dependencies.
@@ -30,8 +30,8 @@ The directory [__zkdoc/src__](zkdoc/src) contains most of the Arithmetic Circuit
 * The file [__zkdoc/src/trusted_ai_interactive_gadgets.hpp__](zkdoc/src/trusted_ai_interactive_gadgets.hpp) contains Arithmetic Circuits for key protocols such as "Simulataneous Permutation Check" and "Memory Access Check" as described in Section 4 of the paper.
 * The file [__zkdoc/src/trusted_ai_cp_gadgets.hpp__](zkdoc/src/trusted_ai_cp_gadgets.hpp) contains Arithmetic Circuits encoding key dataset operations such as filter, inner-join (Section 5 of the paper) as well as decision tree inference (Section 6). 
 
-The directory [__zkdoc/src/adaptive-snark__](zkdoc/src/adaptive-snark) contains implementation of commit and prove zkSNARK based on scheme described in \[Vee17].
-* The file [__zkdoc/src/adaptive-snark/r1cs_adapative_snark.hpp__](zkdoc/src/adaptive-snark/r1cs_adaptive_snark.hpp) contains the implementation of generator, prover and verifier by extending the existing implementation available in _libsnark_. In addition to the circuit specification and the number of public inputs, the generator algorithm takes further two parameters: number of commitment slots (parts of witness which will open a public commitment) and the size of commitment slots. Although in principle, commitment slots can have different sizes, to simplifiy the implementation we assume all slots have the same size (we add dummy variables forced to be 0 when the variables of interest do not exhaust a commitment slot). 
+The directory [__zkdoc/src/adaptive-snark__](zkdoc/src/adaptive-snark) contains implementation of commit and prove zkSNARK based on scheme described in \[VEE17].
+* The file [__zkdoc/src/adaptive-snark/r1cs_adapative_snark.hpp__](zkdoc/src/adaptive-snark/r1cs_adaptive_snark.hpp) contains the implementation of generator, prover and verifier by extending the existing implementation available in \[libsnark]. In addition to the circuit specification and the number of public inputs, the generator algorithm takes further two parameters: number of commitment slots (parts of witness which will open a public commitment) and the size of commitment slots. Although in principle, commitment slots can have different sizes, to simplifiy the implementation we assume all slots have the same size (we add dummy variables forced to be 0 when the variables of interest do not exhaust a commitment slot). 
 * The file [__zkdoc/src/adaptive-snark/trapdoor_commitment.hpp__](zkdoc/src/adaptive-snark/trapdoor_commitment.hpp) contains the associated commitment scheme.
 
 Finally, the file [__zkdoc/src/benchmarks/run_proto_benchmarks.hpp__] contains code invoking different protocols for different parameters.
@@ -93,4 +93,15 @@ References
   Bryan Parno, Craig Gentry, Jon Howell, Mariana Raykova,
   IEEE Symposium on Security and Privacy (Oakland) 2013
 
+\[libsnark] [
+   libsnark: a C++ library for zkSNARK proofs
+](https://github.com/scipr-lab/libsnark)
+
 [SCIPR Lab]: http://www.scipr-lab.org/ (Succinct Computational Integrity and Privacy Research Lab)
+
+\[VEE17] [
+   Pinocchio-Based Adaptive zk-SNARKs and Secure/Correct Adaptive Function Evaluation
+](https://eprint.iacr.org/2017/013),
+   Meilof Veeningen,
+   AFRICACRYPT 2017
+   

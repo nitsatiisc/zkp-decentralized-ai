@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------
-Zero Knowledge Proofs for Decentralized AI Pipelines
+Zero Knowledge Proofs for Verifiable Decentralized AI Pipelines
 --------------------------------------------------------------------------
-This repository contains software artefacts used to obtain the experimental results in the paper "Using Zero Knowledge Proofs for Decentralized AI Pipelines"
+This repository contains software artefacts used to obtain the experimental results in the paper "Using Zero Knowledge Proofs for Verifiable Decentralized AI Pipelines"
 The repository contains: 
 - code to benchmark various protocols discussed in the paper,
 - specification of Arithmetic circuits for different NP relations discussed in the paper using libsnark backend.

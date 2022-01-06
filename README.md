@@ -19,6 +19,7 @@ The directory structure of the repository is as follows:
     * [__src__](zkdoc/src): Containing descriptions of circuits for key NP relations.
         * [__adaptive-snark__](zkdoc/src/adaptive-snark): Commit and Prove extension of Pinocchio \[PGHR13] zkSNARK implementation in \[libsnark].
         * [__benchmarks__](zkdoc/src/benchmarks): Containing utility to run the benchmarks
+        * [__hashing__](zkdoc/src/hashing): We import code for BCS transformation from libiop [https://github.com/scipr-lab/libiop](libiop).
     
 * [__depends__](depends): This folder gets generated and populated by installation scripts automatically. It contains external dependencies.
 

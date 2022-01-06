@@ -132,8 +132,16 @@ class interactive_lookup_arithmetic : public gadget<FieldT>
 
     private:
     pb_variable_array<FieldT> L_, U_, V_, u_, v_, sorted_u_, perm_v_;
-    pb_variable_array<FieldT> less_, less_eq_;
-    std::vector<comparison_gadget<FieldT>> compare_;
+    pb_variable_array<FieldT> delta_;
+
+    // Constraints:
+    // u[i] = i for i=0,..,n-1
+    // u[n+i] = U[i] for i=0,...,m-1
+    // v[i] = L[i] for i=0,...,n-1
+    // v[n+i] = V[i] for i=0,...,m-1
+    // delta[i] * delta[i] = delta[i] for i=0,...,m+n-2
+    // u_sorted[i+1] = u_sorted[i] + delta[i] for i=0,...,m+n-2
+    // (u_sorted[i+1] - u_sorted[i] - 1) * (v_perm[i+1] - v_perm[i]) = 0 for i=0,...,m+n-1
 };
 
 template<typename FieldT>
@@ -161,24 +169,7 @@ interactive_lookup_arithmetic<FieldT>::interactive_lookup_arithmetic(
     assert(v_.size() == M+N);
     assert(sorted_u_.size() == M+N);
     assert(perm_v_.size() == M+N);
-
-    size_t W = libff::log2(N);
-    less_.allocate(this->pb, sorted_u_.size() - 1, "less");
-    less_eq_.allocate(this->pb, sorted_u_.size() - 1, "less_eq");
-    for(size_t i=0; i < less_.size(); ++i)
-    {
-        compare_.emplace_back(
-            comparison_gadget<FieldT>(
-                this->pb,
-                W,
-                sorted_u_[i+1],
-                sorted_u_[i],
-                less_[i],
-                less_eq_[i],
-                "comparison"
-            )
-        );
-    }
+    delta_.allocate(this->pb, M+N-1, "delta");
 
 }
 
@@ -228,16 +219,24 @@ void interactive_lookup_arithmetic<FieldT>::generate_r1cs_constraints()
 
     }
 
-    // monotonocity constraints
-    for(size_t i=0; i < compare_.size(); ++i)
-        compare_[i].generate_r1cs_constraints();
+    // constraints on delta
+    for(size_t i=0; i < delta_.size(); ++i)
+        this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(delta_[i], delta_[i], delta_[i]), "delta booleanarity");
 
-    std::vector<FieldT> coefficients(less_.size(), FieldT::one());
-    this->pb.add_r1cs_constraint(
-        r1cs_constraint<FieldT>(pb_coeff_sum(pb_linear_combination_array<FieldT>(less_), coefficients), 1, 0),
-        "sorted order"
-    );
+    for(size_t i=0; i < delta_.size(); ++i)
+    {
+        this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(sorted_u_[i] + delta_[i], 1, sorted_u_[i+1]), "increment");
+        this->pb.add_r1cs_constraint(
+            r1cs_constraint<FieldT>(
+                sorted_u_[i+1] - sorted_u_[i] - 1,
+                perm_v_[i+1] - perm_v_[i],
+                0
+            ), "lock-step-constraint"
+        );
+    }
 
+    // establish boundary conditions
+    this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(sorted_u_[M+N-1],1,N-1),"boundary condition");
 }
 
 template<typename FieldT>
@@ -273,8 +272,8 @@ void interactive_lookup_arithmetic<FieldT>::generate_r1cs_witness()
         this->pb.val(perm_v_[ perm[i] ])= this->pb.val(v_[i]);
     }
 
-    for(size_t i=0; i < compare_.size(); ++i)
-        compare_[i].generate_r1cs_witness();
+    for(size_t i=0; i < M+N-1; ++i)
+        this->pb.val(delta_[i]) = this->pb.val(sorted_u_[i+1]) - this->pb.val(sorted_u_[i]);
     
 }
 

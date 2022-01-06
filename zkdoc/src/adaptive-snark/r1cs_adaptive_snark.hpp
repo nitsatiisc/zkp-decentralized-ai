@@ -44,6 +44,32 @@ class r1cs_adaptive_snark_proving_key
 
 };
 
+template<typename ppT>
+std::ostream& operator<<(std::ostream& out, const r1cs_adaptive_snark_proving_key<ppT>& pk)
+{
+    out << pk.A_query;
+    out << pk.B_query;
+    out << pk.C_query;
+    out << pk.H_query;
+    out << pk.K_query;
+    out << pk.constraint_system;
+
+    return out;
+}
+
+template<typename ppT>
+std::istream& operator>>(std::istream& in, r1cs_adaptive_snark_proving_key<ppT>& pk)
+{
+    in >> pk.A_query;
+    in >> pk.B_query;
+    in >> pk.C_query;
+    in >> pk.H_query;
+    in >> pk.K_query;
+    in >> pk.constraint_system;
+
+    return in;
+}
+
 /**
  * reviewed
  */
@@ -86,6 +112,46 @@ class r1cs_adaptive_snark_verification_key
     {};
 
 };
+
+template<typename ppT>
+std::ostream& operator<<(std::ostream& out, const r1cs_adaptive_snark_verification_key<ppT>& vk)
+{
+    out << vk.alphaA_g2 << OUTPUT_NEWLINE;
+    out << vk.alphaB_g1 << OUTPUT_NEWLINE;
+    out << vk.alphaC_g2 << OUTPUT_NEWLINE;
+    out << vk.gamma_g2;
+    out << vk.gamma_beta_g1;
+    out << vk.gamma_beta_g2;
+    out << vk.rC_Z_g2 << OUTPUT_NEWLINE;
+    out << vk.alpha_g2 << OUTPUT_NEWLINE;
+    out << vk.encoded_IC_query;
+
+    return out;
+
+}
+
+template<typename ppT>
+std::istream& operator>>(std::istream& in, r1cs_adaptive_snark_verification_key<ppT>& vk)
+{
+   in >> vk.alphaA_g2;
+   libff::consume_OUTPUT_NEWLINE(in);
+   in >> vk.alphaB_g1;
+   libff::consume_OUTPUT_NEWLINE(in);
+   in >> vk.alphaC_g2;
+   libff::consume_OUTPUT_NEWLINE(in);
+   in >> vk.gamma_g2;
+   in >> vk.gamma_beta_g1;
+   in >> vk.gamma_beta_g2;
+   in >> vk.rC_Z_g2;
+   libff::consume_OUTPUT_NEWLINE(in);
+   in >> vk.alpha_g2;
+   libff::consume_OUTPUT_NEWLINE(in);
+   in >> vk.encoded_IC_query;
+
+   return in; 
+}
+
+
 
 /**
  * reviewed
@@ -350,6 +416,10 @@ class r1cs_adaptive_snark_proof
     std::vector<libff::G1<ppT>> g_K;
 
 
+    r1cs_adaptive_snark_proof()
+    {
+        g_H = libff::G1<ppT>::zero();
+    };
 
     r1cs_adaptive_snark_proof(
                std::vector<knowledge_commitment<libff::G1<ppT>, libff::G1<ppT> > > &&g_A,
@@ -365,6 +435,34 @@ class r1cs_adaptive_snark_proof
     {};    
 
 };
+
+template<typename ppT>
+std::ostream& operator<<(std::ostream& out, const r1cs_adaptive_snark_proof<ppT>& proof)
+{
+    out << proof.g_A;
+    out << proof.g_B;
+    out << proof.g_C;
+    out << proof.g_H << OUTPUT_NEWLINE;
+    out << proof.g_K;
+
+    return out;
+
+}
+
+template<typename ppT>
+std::istream& operator>>(std::istream& in, r1cs_adaptive_snark_proof<ppT>& proof)
+{
+    in >> proof.g_A;
+    in >> proof.g_B;
+    in >> proof.g_C;
+    in >> proof.g_H;
+    libff::consume_OUTPUT_NEWLINE(in);
+    in >> proof.g_K;
+
+    return in;
+}
+
+
 
 /**
  * reviewed

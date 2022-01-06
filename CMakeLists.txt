@@ -166,6 +166,8 @@ enable_testing()
 
 include_directories(.)
 
+find_package(cpprestsdk REQUIRED)
+
 find_library(LIBSNARK_LIBRARIES
 NAMES libsnark.a
 HINTS ${CMAKE_SOURCE_DIR}/depends/libsnark/build/libsnark

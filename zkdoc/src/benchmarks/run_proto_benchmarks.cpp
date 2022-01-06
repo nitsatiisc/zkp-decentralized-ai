@@ -26,9 +26,27 @@
 using namespace TrustedAI;
 using namespace libsnark;
 
+#define COMM_KEY_FILE "comm-key.txt"
+#define PERM_KEY_PK "perm-key-pk.txt"
+#define PERM_KEY_VK "perm-key-vk.txt"
+#define ROM_KEY_PK "rom-key-pk.txt"
+#define ROM_KEY_VK "rom-key-vk.txt"
+#define ROM_PERM_KEY_PK "rom-perm-key-pk.txt"
+#define ROM_PERM_KEY_VK "rom-perm-key-vk.txt"
+#define FILTER_KEY_PK "filter-key-pk.txt"
+#define FILTER_KEY_VK "filter-key-vk.txt"
+#define AGGREGATE_KEY_PK "aggregate-key-pk.txt"
+#define AGGREGATE_KEY_VK "aggregate-key-vk.txt"
+#define SELECTION_KEY_PK "selection-key-pk.txt"
+#define SELECTION_KEY_VK "selection-key-vk.txt"
+#define MULTIHASH_KEY_PK "multihash-key-pk.txt"
+#define MULTIHASH_KEY_VK "multihash-key-vk.txt"
+
+
 // choose ALT_BN128 curve (254 bit) for experiments
 typedef libff::alt_bn128_pp snark_pp;
 typedef libff::Fr<snark_pp> FieldT;
+typedef knowledge_commitment<libff::G1<snark_pp>, libff::G2<snark_pp> > CommT;
 
 template <typename FieldT>
 void print_protoboard_info(protoboard<FieldT> &pb)
@@ -555,6 +573,7 @@ void run_interactive_lookup()
 }
 
 // Run the filter protocol for varying size of vector upper bounds (N)
+/*
 void run_interactive_filter_proto()
 {
     snark_pp::init_public_params();
@@ -690,260 +709,8 @@ void run_interactive_filter_proto()
     }
 }
 
+*/
 // Benchmark inner join protocol for different sizes of datasets (N)
-void run_interactive_inner_join_proto()
-{
-    snark_pp::init_public_params();
-    typedef libff::Fr<snark_pp> FieldT;
-    typedef knowledge_commitment<libff::G1<snark_pp>, libff::G2<snark_pp>> CommT;
-    
-    std::ofstream ofile("inner-join-benchmarks.txt");
-    std::vector<size_t> Nvalues = {100, 1000, 10000, 50000};
-
-    for (size_t tn = 0; tn < Nvalues.size(); tn++)
-    {
-        size_t N = Nvalues[tn];
-        size_t slot_size = 2 * N + 1;
-        // lookup subprotocol involves commitments over vectors of size N+1+2N
-        size_t slot_size_lookup = (N+1) + (2*N + 1); 
-
-        // get commitment key
-        commitment_key<snark_pp> ck;
-        ck.sample(slot_size_lookup + 1);
-        long long start, end;
-
-        std::vector<size_t> x = {5, 10, 20, 30, 40, 50, 99, 99, 99, 99, 99};
-        std::vector<size_t> y = {5, 1, 2, 3, 4, 5, 99, 99, 99, 99, 99};
-        std::vector<size_t> z = {4, 2, 4, 6, 8, 99, 99, 99, 99, 99, 99};
-        std::vector<size_t> w = {4, 15, 30, 45, 60, 99, 99, 99, 99, 99, 99};
-
-        x.resize(N + 1);
-        y.resize(N + 1);
-        z.resize(N + 1);
-        w.resize(N + 1);
-
-        merge_transcript tr = generate_merge_transcript(x, y, z, w);
-
-        protoboard<FieldT> pb;
-
-        std::vector<FieldT> vals_x(x.begin(), x.end());
-        std::vector<FieldT> vals_y(y.begin(), y.end());
-        std::vector<FieldT> vals_z(z.begin(), z.end());
-        std::vector<FieldT> vals_w(w.begin(), w.end());
-
-        std::vector<FieldT> vals_tr_X(tr.tr_X.begin(), tr.tr_X.end());
-        std::vector<FieldT> vals_tr_Y(tr.tr_Y.begin(), tr.tr_Y.end());
-        std::vector<FieldT> vals_tr_Z(tr.tr_Z.begin(), tr.tr_Z.end());
-        std::vector<FieldT> vals_tr_W(tr.tr_W.begin(), tr.tr_W.end());
-        std::vector<FieldT> vals_tr_I(tr.tr_I.begin(), tr.tr_I.end());
-        std::vector<FieldT> vals_tr_J(tr.tr_J.begin(), tr.tr_J.end());
-        std::vector<FieldT> vals_tr_O(tr.tr_O.begin(), tr.tr_O.end());
-        std::vector<FieldT> vals_tr_S(tr.tr_S.begin(), tr.tr_S.end());
-
-        std::vector<FieldT> vals_p, vals_q, vals_r;
-        vals_p.emplace_back(tr.p.size());
-        vals_q.emplace_back(tr.q.size());
-        vals_r.emplace_back(tr.r.size());
-
-        vals_p.insert(vals_p.end(), tr.p.begin(), tr.p.end());
-        vals_q.insert(vals_q.end(), tr.q.begin(), tr.q.end());
-        vals_r.insert(vals_r.end(), tr.r.begin(), tr.r.end());
-
-        vals_p.resize(N + 1, FieldT::zero());
-        vals_q.resize(N + 1, FieldT::zero());
-        vals_r.resize(N + 1, FieldT::zero());
-
-        // declare protoboard variables
-        pb_variable_array<FieldT> pb_x, pb_y, pb_z, pb_w, pb_tr_X, pb_tr_Y;
-        pb_variable_array<FieldT> pb_tr_Z, pb_tr_W, pb_tr_I, pb_tr_J, pb_tr_O, pb_tr_S;
-        pb_variable_array<FieldT> pb_p, pb_q, pb_r;
-        pb_variable_array<FieldT> pb_tilde_delta, pb_tilde_p, pb_tilde_q, pb_tilde_r;
-
-        allocate_slot(pb, pb_x, N + 1, slot_size, "pb_x");
-        allocate_slot(pb, pb_y, N + 1, slot_size, "pb_y");
-        allocate_slot(pb, pb_z, N + 1, slot_size, "pb_z");
-        allocate_slot(pb, pb_w, N + 1, slot_size, "pb_w");
-        // p, q, r
-        allocate_slot(pb, pb_p, N + 1, slot_size, "pb_p");
-        allocate_slot(pb, pb_q, N + 1, slot_size, "pb_q");
-        allocate_slot(pb, pb_r, N + 1, slot_size, "pb_r");
-
-        // transcript
-        allocate_slot(pb, pb_tr_X, 2 * N, slot_size, "pb_tr_X");
-        allocate_slot(pb, pb_tr_Y, 2 * N, slot_size, "pb_tr_Y");
-        allocate_slot(pb, pb_tr_Z, 2 * N, slot_size, "pb_tr_Z");
-        allocate_slot(pb, pb_tr_W, 2 * N, slot_size, "pb_tr_W");
-        allocate_slot(pb, pb_tr_I, 2 * N, slot_size, "pb_tr_I");
-        allocate_slot(pb, pb_tr_J, 2 * N, slot_size, "pb_tr_J");
-        allocate_slot(pb, pb_tr_O, 2 * N, slot_size, "pb_tr_O");
-        allocate_slot(pb, pb_tr_S, 2 * N, slot_size, "pb_tr_S");
-
-        // outputs
-        allocate_slot(pb, pb_tilde_delta, 2 * N, slot_size, "pb_tilde_delta");
-        allocate_slot(pb, pb_tilde_p, 2 * N, slot_size, "pb_tilde_p");
-        allocate_slot(pb, pb_tilde_q, 2 * N, slot_size, "pb_tilde_q");
-        allocate_slot(pb, pb_tilde_r, 2 * N, slot_size, "pb_tilde_r");
-
-        cp_inner_join_gadget<FieldT> join_gadget(pb, 32,
-                                                 pb_x, pb_y, pb_z, pb_w,
-                                                 pb_p, pb_q, pb_r,
-                                                 pb_tr_X, pb_tr_Y, pb_tr_Z, pb_tr_W,
-                                                 pb_tr_I, pb_tr_J, pb_tr_O, pb_tr_S,
-                                                 pb_tilde_delta, pb_tilde_p, pb_tilde_q, pb_tilde_r,
-                                                 "join gadget");
-
-        join_gadget.generate_r1cs_constraints();
-
-        // generate witness
-        pb_x.fill_with_field_elements(pb, vals_x);
-        pb_y.fill_with_field_elements(pb, vals_y);
-        pb_z.fill_with_field_elements(pb, vals_z);
-        pb_w.fill_with_field_elements(pb, vals_w);
-        pb_p.fill_with_field_elements(pb, vals_p);
-        pb_q.fill_with_field_elements(pb, vals_q);
-        pb_r.fill_with_field_elements(pb, vals_r);
-
-        pb_tr_X.fill_with_field_elements(pb, vals_tr_X);
-        pb_tr_Y.fill_with_field_elements(pb, vals_tr_Y);
-        pb_tr_Z.fill_with_field_elements(pb, vals_tr_Z);
-        pb_tr_W.fill_with_field_elements(pb, vals_tr_W);
-        pb_tr_I.fill_with_field_elements(pb, vals_tr_I);
-        pb_tr_J.fill_with_field_elements(pb, vals_tr_J);
-        pb_tr_O.fill_with_field_elements(pb, vals_tr_O);
-        pb_tr_S.fill_with_field_elements(pb, vals_tr_S);
-
-        join_gadget.generate_r1cs_witness();
-
-        // ouput vectors of the inner join gadget
-        std::vector<FieldT> vals_tilde_delta, vals_tilde_p, vals_tilde_q, vals_tilde_r;
-        vals_tilde_delta = pb_tilde_delta.get_vals(pb);
-        vals_tilde_p = pb_tilde_p.get_vals(pb);
-        vals_tilde_q = pb_tilde_q.get_vals(pb);
-        vals_tilde_r = pb_tilde_r.get_vals(pb);
-
-
-        std::vector<FieldT> rand_vec;
-        for (size_t i = 0; i < 19; ++i)
-            rand_vec.emplace_back(FieldT::random_element());
-        
-        // compute commitments for each of the commitment slots
-        auto cm_x = compute_commitment(ck, vals_x, rand_vec[0]);
-        auto cm_y = compute_commitment(ck, vals_y, rand_vec[1]);
-        auto cm_z = compute_commitment(ck, vals_z, rand_vec[2]);
-        auto cm_w = compute_commitment(ck, vals_w, rand_vec[3]);
-        auto cm_p = compute_commitment(ck, vals_p, rand_vec[4]);
-        auto cm_q = compute_commitment(ck, vals_q, rand_vec[5]);
-        auto cm_r = compute_commitment(ck, vals_r, rand_vec[6]);
-        
-        auto cm_tr_X = compute_commitment(ck, vals_tr_X, rand_vec[7]);
-        auto cm_tr_Y = compute_commitment(ck, vals_tr_Y, rand_vec[8]);
-        auto cm_tr_Z = compute_commitment(ck, vals_tr_Z, rand_vec[9]);
-        auto cm_tr_W = compute_commitment(ck, vals_tr_W, rand_vec[10]);
-        auto cm_tr_I = compute_commitment(ck, vals_tr_I, rand_vec[11]);
-        auto cm_tr_J = compute_commitment(ck, vals_tr_J, rand_vec[12]);
-        auto cm_tr_O = compute_commitment(ck, vals_tr_O, rand_vec[13]);
-        auto cm_tr_S = compute_commitment(ck, vals_tr_S, rand_vec[14]);
-
-        auto cm_tilde_delta = compute_commitment(ck, vals_tilde_delta, rand_vec[15]);
-        auto cm_tilde_p = compute_commitment(ck, vals_tilde_p, rand_vec[16]);
-        auto cm_tilde_q = compute_commitment(ck, vals_tilde_q, rand_vec[17]);
-        auto cm_tilde_r = compute_commitment(ck, vals_tilde_r, rand_vec[18]);
-
-        auto cm_vec = {cm_x, cm_y, cm_z, cm_w, cm_p, cm_q, cm_r, cm_tr_X, cm_tr_Y, cm_tr_Z, cm_tr_W,
-                        cm_tr_I, cm_tr_J, cm_tr_O, cm_tr_S, cm_tilde_delta, cm_tilde_p, cm_tilde_q, cm_tilde_r};
-
-
-
-        // generate keys
-        r1cs_adaptive_snark_keypair<snark_pp> key = r1cs_adaptive_snark_generator(
-            pb.get_constraint_system(),
-            ck,
-            19,
-            slot_size);
-
-        start = libff::get_nsec_time();
-        auto proof = r1cs_adaptive_snark_prover(
-            key.pk,
-            pb.primary_input(),
-            pb.auxiliary_input(),
-            rand_vec,
-            19,
-            slot_size);
-        end = libff::get_nsec_time();
-        auto prover_time = (end - start) / 1000000000;
-
-        start = libff::get_nsec_time();
-        bool ok = r1cs_adaptive_snark_verifier(
-            key.vk,
-            pb.primary_input(), 
-            cm_vec, 
-            19, 
-            slot_size,
-            proof);
-        end = libff::get_nsec_time();
-        auto verifier_time = (end - start)/1000000;
-
-        // add the lookup subprotocols
-        proto_stats lookup1_stats, lookup2_stats;
-        FieldT gamma = FieldT::random_element();
-        // Use gamma to combine the lookups with same access patterns I and J
-        // vals_x and vals_y and indexed using I
-        // vals_z and vals_w are indexed using J
-        std::vector<FieldT> L1(vals_x.size()), L2(vals_z.size());
-        std::vector<FieldT> V1(vals_tr_X.size()), V2(vals_tr_Y.size());
-
-        for(size_t i=0; i < L1.size(); ++i)
-        {
-            L1[i] = vals_x[i] + (gamma * vals_y[i]);
-            L2[i] = vals_z[i] + (gamma * vals_w[i]);
-        }
-
-        for(size_t i=0; i < V1.size(); ++i)
-        {
-            V1[i] = vals_tr_X[i] + (gamma * vals_tr_Y[i]);
-            V2[i] = vals_tr_Z[i] + (gamma * vals_tr_W[i]);
-        }
-
-        CommT cm_L_1 = cm_x + gamma * cm_y;
-        CommT cm_L_2 = cm_z + gamma * cm_w;
-        CommT cm_V_1 = cm_tr_X + gamma * cm_tr_Y;
-        CommT cm_V_2 = cm_tr_Z + gamma * cm_tr_W;
-
-        FieldT rL_1 = rand_vec[0] + gamma * rand_vec[1]; // corresponding to x + \gamma. y
-        FieldT rL_2 = rand_vec[2] + gamma * rand_vec[3]; // corr. to z + \gamma. w
-        FieldT rV_1 = rand_vec[7] + gamma * rand_vec[8];
-        FieldT rV_2 = rand_vec[9] + gamma * rand_vec[10];
-        FieldT rU_1 = rand_vec[11];
-        FieldT rU_2 = rand_vec[12];
-        std::vector<CommT> cm_vec_1 = {cm_L_1, cm_tr_I, cm_V_1};
-        std::vector<CommT> cm_vec_2 = {cm_L_2, cm_tr_J, cm_V_2};
-
-        
-        lookup1_stats = execute_interactive_lookup_proto<snark_pp>(
-            ck,
-            slot_size_lookup,
-            cm_vec_1,
-            L1, vals_tr_I, V1,
-            rL_1, rU_1, rV_1
-        );
-
-        lookup2_stats = execute_interactive_lookup_proto<snark_pp>(
-            ck,
-            slot_size_lookup,
-            cm_vec_2,
-            L2, vals_tr_J, V2,
-            rL_2, rU_2, rV_2
-        );
-
-        long long t_prover_time = prover_time + lookup1_stats.prover_time + lookup2_stats.prover_time;
-        long long t_verifier_time = verifier_time + lookup1_stats.verifier_time + lookup2_stats.verifier_time;
-        bool status = ok & lookup1_stats.status & lookup2_stats.status;
-        long long t_constraints = pb.num_constraints() + 2 * lookup1_stats.num_constraints;
-
-        ofile << N << " " << t_prover_time << " " << t_verifier_time << " " << t_constraints << " " << status << std::endl;
-
-    }
-}
 
 // run and benchmark interactive decision tree protocol
 void run_interactive_decision_tree_proto()
@@ -1131,12 +898,274 @@ void run_interactive_decision_tree_proto()
 
 }
 
+void do_one_time_comm_key(size_t key_size)
+{
+    snark_pp::init_public_params();
+    commitment_key<snark_pp> ck;
+    ck.sample(key_size);
+    
+    std::ofstream ckfile(COMM_KEY_FILE);
+    ck.serialize(ckfile);
+    ckfile.close();
+}
+
+void do_setup_permutation_gadget(size_t N, const std::string& pkfilename, const std::string& vkfilename)
+{
+    snark_pp::init_public_params();
+    protoboard<FieldT> pb;
+    size_t slot_size = N;
+
+    pb_variable<FieldT> challenge;
+    pb_variable_array<FieldT> input, output;
+    long long start, end;
+    proto_stats run_stats;
+
+    challenge.allocate(pb, "challenge");
+    allocate_slot(pb, input, N, slot_size, "input");
+    allocate_slot(pb, output, N, slot_size, "output");
+
+    interactive_permutation_gadget<FieldT> permutation_gadget(pb, challenge, input, output, "permutation test");
+    permutation_gadget.generate_r1cs_constraints();
+    pb.set_input_sizes(1);
+
+    // read commitment key
+    commitment_key<snark_pp> ck;
+    std::ifstream ckfile(COMM_KEY_FILE);
+    ck.deserialize(ckfile);
+    ckfile.close();
+
+    // generate keypair
+    start = libff::get_nsec_time();
+    r1cs_adaptive_snark_keypair<snark_pp> perm_key = r1cs_adaptive_snark_generator(
+        pb.get_constraint_system(),
+        ck,
+        2,
+        slot_size);
+    end = libff::get_nsec_time();
+    run_stats.generator_time = (end - start)/1000000000;
+
+    std::ofstream pkfile(pkfilename);
+    std::ofstream vkfile(vkfilename);
+
+    pkfile << perm_key.pk;
+    vkfile << perm_key.vk;
+
+    pkfile.close();
+    vkfile.close();
+}
+
+void do_setup_rom_access_gadget(size_t m, size_t n, const std::string& pkfilename, const std::string& vkfilename)
+{
+    snark_pp::init_public_params();
+    protoboard<FieldT> pb; 
+
+    size_t slot_size = m + n;
+
+    pb_variable_array<FieldT> pb_L, pb_U, pb_V;
+    pb_variable_array<FieldT> pb_uL, pb_vL, pb_uR, pb_vR;
+
+    allocate_slot(pb, pb_L, n, slot_size, "pb_L");
+    allocate_slot(pb, pb_U, m, slot_size, "pb_U");
+    allocate_slot(pb, pb_V, m, slot_size, "pb_V");
+    allocate_slot(pb, pb_uL, m+n, slot_size, "pb_uL");
+    allocate_slot(pb, pb_vL, m+n, slot_size, "pb_vL");
+    allocate_slot(pb, pb_uR, m+n, slot_size, "pb_uR");
+    allocate_slot(pb, pb_vR, m+n, slot_size, "pb_vR");
+
+
+    interactive_lookup_arithmetic<FieldT> lookup_arith_gadget(pb, pb_L, pb_U, pb_V, pb_uL, pb_vL, pb_uR, pb_vR, "lookup_arith_gadget");
+    lookup_arith_gadget.generate_r1cs_constraints();
+
+    // read commitment key
+    commitment_key<snark_pp> ck;
+    std::ifstream ckfile(COMM_KEY_FILE);
+    ck.deserialize(ckfile);
+    ckfile.close();
+
+    r1cs_adaptive_snark_keypair<snark_pp> key = r1cs_adaptive_snark_generator(
+        pb.get_constraint_system(),
+        ck,
+        7,
+        slot_size);
+
+    std::ofstream pkfile(pkfilename);
+    std::ofstream vkfile(vkfilename);
+
+    pkfile << key.pk;
+    vkfile << key.vk;
+}
+
+void do_setup_filter_gadget(size_t n, size_t slot_size, const std::string& pkfilename, const std::string& vkfilename)
+{
+    snark_pp::init_public_params();
+    protoboard<FieldT> pb;
+
+    // define commitment slots
+    pb_variable_array<FieldT> x, f, y, X, Y, delta;
+    allocate_slot(pb, x, n+1, slot_size, "x");
+    allocate_slot(pb, f, n, slot_size, "f");
+    allocate_slot(pb, y, n+1, slot_size, "y");
+    allocate_slot(pb, X, n, slot_size, "X");
+    allocate_slot(pb, Y, n, slot_size, "Y");
+    allocate_slot(pb, delta, n, slot_size, "delta");
+
+    cp_filter_gadget<FieldT> filter_gadget(pb, x, f, y, X, Y, delta, "filter-gadget");
+    filter_gadget.generate_r1cs_constraints();
+
+    // generate keys
+    std::ifstream ckfile(COMM_KEY_FILE);
+    commitment_key<snark_pp> ck;
+    ck.deserialize(ckfile);
+    ckfile.close();
+
+    r1cs_adaptive_snark_keypair<snark_pp> key = r1cs_adaptive_snark_generator(
+        pb.get_constraint_system(),
+        ck,
+        6,
+        slot_size
+    );
+
+    std::ofstream pkfile(pkfilename), vkfile(vkfilename);
+    pkfile << key.pk;
+    vkfile << key.vk;
+
+    pkfile.close();
+    vkfile.close();
+
+}
+
+void do_setup_selection_gadget(size_t n, size_t slot_size, const std::string& pkfilename, const std::string& vkfilename)
+{
+    snark_pp::init_public_params();
+    protoboard<FieldT> pb;
+
+    // define commitment slots
+    pb_variable_array<FieldT> x, f;
+    pb_variable<FieldT> v;
+
+    v.allocate(pb, "v");
+    allocate_slot(pb, x, n+1, slot_size, "x");
+    allocate_slot(pb, f, n, slot_size, "f");
+
+    cp_equality_gadget<FieldT> equal_gadget(pb, v, x, f, "equality_gadget");
+    equal_gadget.generate_r1cs_constraints();
+
+    // generate keys
+    std::ifstream ckfile(COMM_KEY_FILE);
+    commitment_key<snark_pp> ck;
+    ck.deserialize(ckfile);
+    ckfile.close();
+
+    r1cs_adaptive_snark_keypair<snark_pp> key = r1cs_adaptive_snark_generator(
+        pb.get_constraint_system(),
+        ck,
+        6,
+        slot_size
+    );
+
+    std::ofstream pkfile(pkfilename), vkfile(vkfilename);
+    pkfile << key.pk;
+    vkfile << key.vk;
+
+    pkfile.close();
+    vkfile.close();
+
+}
+
+void do_setup_aggregate_gadget(size_t n, size_t slot_size, const std::string& pkfilename, const std::string& vkfilename)
+{
+    snark_pp::init_public_params();
+    protoboard<FieldT> pb;
+
+    // define commitment slots
+    pb_variable_array<FieldT> x, y, z, XY, rhosigma, Zext, deltaext;
+    allocate_slot(pb, x, n+1, slot_size, "x");
+    allocate_slot(pb, y, n+1, slot_size, "y");
+    allocate_slot(pb, z, n+1, slot_size, "z");
+    allocate_slot(pb, XY, 2*n, slot_size, "XY");
+    allocate_slot(pb, rhosigma, 2*n, slot_size, "rhosigma");
+    allocate_slot(pb, Zext, 2*n, slot_size, "Zext");
+    allocate_slot(pb, deltaext, 2*n, slot_size, "deltaext");
+
+    cp_aggregate_gadget<FieldT> aggregation_gadget(pb, x, y, z, XY, rhosigma, Zext, deltaext, "aggregation_gadget");
+    aggregation_gadget.generate_r1cs_constraints();
+
+    // generate keys
+    std::ifstream ckfile(COMM_KEY_FILE);
+    commitment_key<snark_pp> ck;
+    ck.deserialize(ckfile);
+    ckfile.close();
+
+    r1cs_adaptive_snark_keypair<snark_pp> key = r1cs_adaptive_snark_generator(
+        pb.get_constraint_system(),
+        ck,
+        7,
+        slot_size
+    );
+
+    std::ofstream pkfile(pkfilename), vkfile(vkfilename);
+    pkfile << key.pk;
+    vkfile << key.vk;
+
+    pkfile.close();
+    vkfile.close();
+}
+
+void do_setup_hash_gadget(size_t n, size_t slot_size, const std::string& pkfilename, const std::string& vkfilename)
+{
+    snark_pp::init_public_params();
+    protoboard<FieldT> pb;
+
+    // define commitment slots
+    pb_variable_array<FieldT> x;
+    pb_variable_array<FieldT> multi_hashes;
+
+    size_t h = sizeof(TrustedAI::partial_hash_sizes)/sizeof(size_t);
+    multi_hashes.allocate(pb, h, "multi_hashes");
+    allocate_slot(pb, x, n+1, slot_size, "x");
+
+    multi_hash_consistency_gadget<FieldT> hash_gadget(pb, x, multi_hashes, "multi_hash_consistency_gadget");
+    hash_gadget.generate_r1cs_constraints();
+
+    // generate keys
+    std::ifstream ckfile(COMM_KEY_FILE);
+    commitment_key<snark_pp> ck;
+    ck.deserialize(ckfile);
+    ckfile.close();
+
+    r1cs_adaptive_snark_keypair<snark_pp> key = r1cs_adaptive_snark_generator(
+        pb.get_constraint_system(),
+        ck,
+        1,
+        slot_size
+    );
+
+    std::ofstream pkfile(pkfilename), vkfile(vkfilename);
+    pkfile << key.pk;
+    vkfile << key.vk;
+
+    pkfile.close();
+    vkfile.close();
+}
+
+
 
 int main(int argc, char *argv[])
 {
+    /*
     run_interactive_filter_proto();
     run_interactive_lookup();
     run_interactive_inner_join_proto();
     run_interactive_decision_tree_proto();
+    */
+    //do_one_time_comm_key(500000);
+    //do_setup_permutation_gadget(100000, PERM_KEY_PK, PERM_KEY_VK);
+    //do_setup_rom_access_gadget(100000, 100000, ROM_KEY_PK, ROM_KEY_VK);
+    //do_setup_permutation_gadget(200000, ROM_PERM_KEY_PK, ROM_PERM_KEY_VK);
+    // do_setup_filter_gadget(100000, 100000 + 1, FILTER_KEY_PK, FILTER_KEY_VK);
+    //do_setup_aggregate_gadget(100000, 200000, AGGREGATE_KEY_PK, AGGREGATE_KEY_VK);
+    //do_setup_selection_gadget(100000, 100000 + 1, SELECTION_KEY_PK, SELECTION_KEY_VK);
+    do_setup_hash_gadget(100000, 100000 + 1, MULTIHASH_KEY_PK, MULTIHASH_KEY_VK);
+    //run_permutation_snark_single(100000);    
     return 0;
 }

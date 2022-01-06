@@ -50,6 +50,9 @@ using namespace libsnark;
 #define FILTER_KEY_VK "filter-key-vk.txt"
 #define AGGREGATE_KEY_PK "aggregate-key-pk.txt"
 #define AGGREGATE_KEY_VK "aggregate-key-vk.txt"
+#define MULTIHASH_KEY_PK "multihash-key-pk.txt"
+#define MULTIHASH_KEY_VK "multihash-key-vk.txt"
+
 
 
 

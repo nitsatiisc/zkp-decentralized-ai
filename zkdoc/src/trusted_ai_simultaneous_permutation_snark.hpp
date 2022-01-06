@@ -19,8 +19,6 @@ bool simultaneous_permutation_snark_verifier(
     const std::string& vkfilename,
     HashChainT& hash_chain,
     size_t slot_size,
-    const std::vector<CommT>& left,
-    const std::vector<CommT>& right,
     const SnarkProof& proof
 );
 

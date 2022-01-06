@@ -506,7 +506,6 @@ void multi_hash_consistency_gadget<FieldT>::generate_r1cs_constraints()
 			"output multi_hashes"
 		);
 	}	
-
 }
 
 template<typename FieldT>
@@ -520,7 +519,6 @@ void multi_hash_consistency_gadget<FieldT>::generate_r1cs_witness()
 	{
 		this->pb.val(multi_hashes_[i]) = this->pb.val(intermediate_keys_[ partial_hash_sizes[i] ]);
 	}
-
 }
 
 
